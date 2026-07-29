@@ -1507,13 +1507,22 @@ textarea.fc{resize:vertical;min-height:80px;}
               <div class="card">
                 <div class="card-header">
                   <div class="card-header-title"><i class="fas fa-user-shield text-accent"></i> مصفوفة الصلاحيات</div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-ghost btn-sm" onclick="resetPermissions()"><i class="fas fa-undo"></i> استعادة الافتراضي</button>
+                    <button class="btn btn-primary btn-sm" id="perm-save-btn" onclick="savePermissions()"><i class="fas fa-save"></i> حفظ الصلاحيات</button>
+                  </div>
                 </div>
-                <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">نظرة عامة على صلاحيات كل دور في النظام</p>
+                <p style="font-size:12px;color:var(--text2);margin-bottom:6px;">
+                  علّم أو أزل العلامة لتحديد الصفحات المتاحة لكل دور، ثم اضغط حفظ. التغيير يسري على كل الأجهزة فوراً.
+                </p>
+                <div style="background:var(--yellow-bg);border:1px solid var(--yellow);border-radius:8px;padding:9px 12px;font-size:11.5px;color:var(--yellow);margin-bottom:14px;">
+                  <i class="fas fa-crown"></i> صلاحيات <strong>المدير العام</strong> مثبّتة على الكل ولا يمكن تعديلها — حتى لا يُغلق على نفسه الوصول للإعدادات والمستخدمين.
+                </div>
                 <div style="overflow-x:auto;">
-                  <table class="perm-table">
+                  <table class="perm-table" id="perm-table">
                     <thead>
                       <tr>
-                        <th style="min-width:140px;">الوحدة</th>
+                        <th style="min-width:150px;">الصفحة</th>
                         <th><i class="fas fa-crown" style="color:var(--red);"></i><br>مدير عام</th>
                         <th><i class="fas fa-building" style="color:var(--orange);"></i><br>مدير فرع</th>
                         <th><i class="fas fa-cash-register" style="color:var(--green);"></i><br>كاشير</th>
@@ -1521,17 +1530,11 @@ textarea.fc{resize:vertical;min-height:80px;}
                         <th><i class="fas fa-warehouse" style="color:var(--yellow);"></i><br>مشرف مخازن</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      <tr><td>الرئيسية</td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td></tr>
-                      <tr><td>الكاشير</td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td></tr>
-                      <tr><td>المخازن</td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-check perm-check"></i></td></tr>
-                      <tr><td>المشتريات</td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-check perm-check"></i></td></tr>
-                      <tr><td>المالية</td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td></tr>
-                      <tr><td>الفروع</td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td></tr>
-                      <tr><td>المستخدمون</td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td></tr>
-                      <tr><td>الإعدادات</td><td><i class="fas fa-check perm-check"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td><td><i class="fas fa-minus perm-cross"></i></td></tr>
-                    </tbody>
+                    <tbody id="perm-tbody"></tbody>
                   </table>
+                </div>
+                <div id="perm-dirty-note" style="display:none;margin-top:12px;background:var(--accent-bg);border:1px solid var(--accent);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--accent);">
+                  <i class="fas fa-info-circle"></i> في تعديلات غير محفوظة — اضغط «حفظ الصلاحيات» لتطبيقها.
                 </div>
               </div>
             </div>
@@ -4906,6 +4909,8 @@ let CURRENT_USER  = null;
 // كل عملية في النظام تُختم برقم الوردية، فيكون تقرير الوردية شاملاً لكل ما تم فيها.
 let CURRENT_SHIFT = null;     // كائن الوردية المفتوحة للمستخدم الحالي {id,...}
 let _shiftOpening = false;    // منع فتح وردية مرتين في نفس اللحظة
+let _shiftsLoaded = false;    // هل وصلت بيانات الورديات؟ قبلها لا نفتح وردية جديدة
+let _shiftClosedByAdmin = false; // أقفل المدير ورديتنا — لا نفتح بديلة إلا بدخول جديد
 
 const SHIFT_STATUS_LABELS={open:'مفتوحة', closed:'مقفلة'};
 // الوردية قد تعبر منتصف الليل، فالتنبيه يعتمد على عدد الساعات لا على تغيّر اليوم
@@ -4963,10 +4968,21 @@ async function openShift(openingCash=0){
 }
 
 // يضمن وجود وردية مفتوحة للمستخدم الحالي — يُستدعى بعد الدخول وبعد تحميل الورديات
-async function ensureMyShift(){
+// force=true فقط من زر «فتح وردية» اليدوي
+async function ensureMyShift(force=false){
   if(!CURRENT_USER || _shiftOpening) return;
   const existing=findOpenShift(CURRENT_USER.id);
+
+  // لا نفتح وردية جديدة قبل أن تصل بيانات الورديات من السحابة.
+  // بدون هذا الشرط كان كل refresh يفتح وردية جديدة، لأن استعادة الجلسة
+  // تسبق وصول listen('shifts') فتبدو القائمة فارغة.
+  if(!existing && !_shiftsLoaded && !force) return;
+
+  // أقفل المدير العام ورديتك؟ لا نفتح بديلة تلقائياً — تُفتح عند الدخول التالي فقط
+  if(!existing && _shiftClosedByAdmin && !force) return;
+
   if(existing){
+    _shiftClosedByAdmin=false;
     CURRENT_SHIFT=existing;
     renderShiftIndicator();
     // الوردية قد تمتد لما بعد منتصف الليل، فلا نحكم عليها بتغيّر التاريخ.
@@ -5159,6 +5175,60 @@ const MENU = {
     ]},
   ],
 };
+
+// ============================================================
+// PERMISSIONS — صلاحيات قابلة للتعديل من الإعدادات
+// ============================================================
+// كتالوج كل صفحات النظام. هو المصدر الوحيد لبناء القائمة الجانبية
+// ومصفوفة الصلاحيات، فأي صفحة جديدة تُضاف هنا تظهر في الاثنين تلقائياً.
+const PAGE_CATALOG = [
+  { page:'home',         section:'العمليات', icon:'fas fa-home',                label:'الرئيسية' },
+  { page:'cashier',      section:'العمليات', icon:'fas fa-cash-register',       label:'الكاشير' },
+  { page:'invoices',     section:'العمليات', icon:'fas fa-file-invoice',        label:'الفواتير' },
+  { page:'customers',    section:'العمليات', icon:'fas fa-users',               label:'العملاء' },
+  { page:'debts',        section:'العمليات', icon:'fas fa-hand-holding-usd',    label:'الديون' },
+  { page:'cashboxes',    section:'العمليات', icon:'fas fa-safe',                label:'الخزائن' },
+  { page:'returns',      section:'العمليات', icon:'fas fa-undo-alt',            label:'المرتجعات' },
+  { page:'warehouse',    section:'العمليات', icon:'fas fa-boxes',               label:'المخازن' },
+  { page:'transfers',    section:'العمليات', icon:'fas fa-truck-moving',        label:'نقل المخزون' },
+  { page:'purchases',    section:'العمليات', icon:'fas fa-shopping-cart',       label:'المشتريات' },
+  { page:'finance',      section:'العمليات', icon:'fas fa-chart-line',          label:'المالية' },
+  { page:'shifts',       section:'العمليات', icon:'fas fa-user-clock',          label:'الورديات' },
+  { page:'branches',     section:'الإدارة',  icon:'fas fa-building',            label:'الفروع' },
+  { page:'users',        section:'الإدارة',  icon:'fas fa-users-cog',           label:'المستخدمون' },
+  { page:'reports',      section:'الإدارة',  icon:'fas fa-chart-bar',           label:'التقارير' },
+  { page:'import',       section:'الإدارة',  icon:'fas fa-file-excel',          label:'استيراد Excel' },
+  { page:'backup',       section:'الإدارة',  icon:'fas fa-database',            label:'النسخ الاحتياطي' },
+  { page:'settings',     section:'الإدارة',  icon:'fas fa-cog',                 label:'الإعدادات' },
+  { page:'inv-settings', section:'الإدارة',  icon:'fas fa-file-invoice-dollar', label:'تصميم الفاتورة' },
+];
+
+const PERM_ROLES = ['admin','branch_mgr','cashier','accountant','warehouse'];
+
+// الافتراضيات = نفس توزيع MENU الحالي، فلا يتغيّر سلوك النظام قبل أن يعدّل الأدمن شيئاً
+const PERM_DEFAULTS = (()=>{
+  const out={};
+  PERM_ROLES.forEach(role=>{
+    const allowed=new Set((MENU[role]||[]).flatMap(sec=>sec.items.map(i=>i.page)));
+    out[role]={};
+    PAGE_CATALOG.forEach(p=>{ out[role][p.page]=allowed.has(p.page); });
+  });
+  return out;
+})();
+
+// المدير العام يملك كل شيء دائماً — بلا هذا القيد يستطيع أن يسحب من نفسه
+// صلاحية الإعدادات أو المستخدمين فيُغلق الباب خلفه بلا طريق للرجوع.
+function hasPerm(role, page){
+  if(role==='admin') return true;
+  const saved=S.settings?.permissions?.[role];
+  if(saved && saved[page]!==undefined) return !!saved[page];
+  return !!PERM_DEFAULTS[role]?.[page];
+}
+
+// صفحات دور معيّن مرتّبة حسب الكتالوج
+function rolePages(role){
+  return PAGE_CATALOG.filter(p=>hasPerm(role,p.page));
+}
 
 const PAGE_TITLES = {
   home:'الرئيسية', cashier:'الكاشير', warehouse:'المخازن',
@@ -5580,6 +5650,14 @@ function getRoleAvatarBg(role){ return (ROLES[role]||{}).avatarBg||'#8b949e'; }
 // NAVIGATION
 // ============================================================
 function nav(page){
+  // حارس الصلاحيات — يمنع الوصول حتى لو جاء من صفحة محفوظة في localStorage
+  const role=CURRENT_USER?.role;
+  if(role && !hasPerm(role,page)){
+    const fallback=firstAllowedPage(role);
+    toast('لا تملك صلاحية الوصول لهذه الصفحة','error');
+    if(fallback && fallback!==page) nav(fallback);
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('pg-'+page)?.classList.add('active');
@@ -5597,14 +5675,22 @@ function nav(page){
 // BUILD SIDEBAR
 // ============================================================
 function buildSidebar(){
-  const role = CURRENT_USER?.role||'cashier';
-  const menu = MENU[role]||MENU.cashier;
+  const role  = CURRENT_USER?.role||'cashier';
+  const pages = rolePages(role);
+
+  // نجمّع الصفحات المسموح بها تحت أقسامها، ونتخطى أي قسم فارغ
   let html='';
-  menu.forEach(sec=>{
-    html+=`<div class="sb-section"><div class="sb-label">${sec.section}</div>`;
-    sec.items.forEach(item=>{
+  ['العمليات','الإدارة'].forEach(section=>{
+    const items=pages.filter(p=>p.section===section);
+    if(!items.length) return;
+    html+=`<div class="sb-section"><div class="sb-label">${section}</div>`;
+    items.forEach(item=>{
+      // الورديات: المدير العام يديرها للجميع، وغيره يرى ورديته فقط
+      const label = item.page==='shifts'
+        ? (role==='admin' ? 'إدارة الورديات' : 'ورديتي')
+        : item.label;
       html+=`<div class="sb-item" data-page="${item.page}" onclick="nav('${item.page}')">
-        <i class="${item.icon}"></i> ${item.label}
+        <i class="${item.icon}"></i> ${label}
       </div>`;
     });
     html+='</div>';
@@ -5616,11 +5702,15 @@ function buildSidebar(){
   document.getElementById('sb-branch-name').textContent = branchName || 'النظام المركزي';
 
   // أزرار الشريط العلوي — تظهر حسب الصفحات المتاحة للدور
-  const pages = new Set(menu.flatMap(sec=>sec.items.map(i=>i.page)));
   const posBtn  = document.getElementById('tb-pos-btn');
   const custBtn = document.getElementById('tb-cust-search-btn');
-  if(posBtn)  posBtn.style.display  = pages.has('cashier') ? '' : 'none';
-  if(custBtn) custBtn.style.display = (pages.has('customers')||pages.has('cashier')) ? '' : 'none';
+  if(posBtn)  posBtn.style.display  = hasPerm(role,'cashier') ? '' : 'none';
+  if(custBtn) custBtn.style.display = (hasPerm(role,'customers')||hasPerm(role,'cashier')) ? '' : 'none';
+}
+
+// أول صفحة متاحة للدور — يُرجَع إليها عند منع الوصول أو عند الدخول
+function firstAllowedPage(role){
+  return rolePages(role)[0]?.page || null;
 }
 
 function getBranchName(branchId){
@@ -5834,7 +5924,8 @@ function doLogin(){
   dbUpdate('users/'+loginSelectedUser.id,{lastLogin:new Date().toISOString()});
   localStorage.setItem('shams-user',JSON.stringify(CURRENT_USER));
   showApp();
-  ensureMyShift();   // وردية تُفتح تلقائياً مع بداية العمل
+  _shiftClosedByAdmin=false;   // دخول جديد = بداية عمل جديدة
+  ensureMyShift();             // تُفتح الوردية بعد وصول بيانات الورديات
 }
 
 // ============================================================
@@ -5866,12 +5957,12 @@ function showApp(restoreLastPage=false){
   buildSidebar();
   refreshTopbar();
 
-  // الرئيسية مخصصة للمدير العام فقط. باقي الأدوار تُفتح مباشرة على أول صفحة في قائمتها
-  // (مدير الفرع/الكاشير → الكاشير، المحاسب → المالية، مشرف المخازن → المخازن).
+  // كل دور يُفتح على أول صفحة مسموح له بها حسب مصفوفة الصلاحيات
   const role = CURRENT_USER?.role;
-  const fallbackPage = (role && role!=='admin') ? (MENU[role]?.[0]?.items?.[0]?.page || 'cashier') : 'home';
+  const fallbackPage = firstAllowedPage(role) || 'cashier';
   let lastPage = restoreLastPage ? (localStorage.getItem('shams-last-page')||fallbackPage) : fallbackPage;
-  if(lastPage==='home' && role!=='admin') lastPage = fallbackPage; // منع غير المدير العام من الوصول للرئيسية حتى لو كانت محفوظة كآخر صفحة
+  // الصفحة المحفوظة قد تكون سُحبت صلاحيتها بعد آخر دخول
+  if(!hasPerm(role,lastPage)) lastPage = fallbackPage;
   nav(lastPage);
 
   renderHomeStats();
@@ -6500,8 +6591,114 @@ function switchSettingsPanel(panel){
   document.querySelectorAll('.settings-nav-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('sp-'+panel)?.classList.add('active');
   document.querySelector(`.settings-nav-item[data-panel="${panel}"]`)?.classList.add('active');
-  if(panel==='general')    loadGeneralSettings();
-  if(panel==='appearance') renderPaletteGrids();
+  if(panel==='general')     loadGeneralSettings();
+  if(panel==='appearance')  renderPaletteGrids();
+  if(panel==='permissions') renderPermMatrix();
+}
+
+// ============================================================
+// PERMISSIONS MATRIX — تعديل الصلاحيات من الواجهة
+// ============================================================
+// مسوّدة التعديلات قبل الحفظ — لا تُطبَّق على النظام حتى يضغط الأدمن حفظ
+let permDraft = null;
+
+function permDraftInit(){
+  permDraft={};
+  PERM_ROLES.forEach(role=>{
+    permDraft[role]={};
+    PAGE_CATALOG.forEach(p=>{ permDraft[role][p.page]=hasPerm(role,p.page); });
+  });
+}
+
+function renderPermMatrix(){
+  const tbody=document.getElementById('perm-tbody'); if(!tbody) return;
+  if(!permDraft) permDraftInit();
+
+  let html='';
+  ['العمليات','الإدارة'].forEach(section=>{
+    const pages=PAGE_CATALOG.filter(p=>p.section===section);
+    if(!pages.length) return;
+    html+=`<tr><td colspan="6" style="background:var(--card2);font-weight:800;font-size:11.5px;color:var(--text2);padding:7px 12px;">${section}</td></tr>`;
+    pages.forEach(p=>{
+      html+=`<tr><td style="text-align:right;"><i class="${p.icon}" style="color:var(--accent);width:16px;"></i> ${p.label}</td>`;
+      PERM_ROLES.forEach(role=>{
+        const locked = role==='admin';   // المدير العام دائماً كامل الصلاحية
+        const on = locked ? true : !!permDraft[role][p.page];
+        html+=`<td>
+          <input type="checkbox" ${on?'checked':''} ${locked?'disabled':''}
+            onchange="togglePerm('${role}','${p.page}',this.checked)"
+            title="${locked?'صلاحيات المدير العام مثبّتة':''}"
+            style="width:17px;height:17px;cursor:${locked?'not-allowed':'pointer'};accent-color:var(--accent);${locked?'opacity:.55;':''}">
+        </td>`;
+      });
+      html+='</tr>';
+    });
+  });
+  tbody.innerHTML=html;
+  markPermDirty(false);
+}
+
+function togglePerm(role,page,val){
+  if(role==='admin') return;
+  if(!permDraft) permDraftInit();
+  permDraft[role][page]=!!val;
+  markPermDirty(true);
+}
+
+function markPermDirty(dirty){
+  const note=document.getElementById('perm-dirty-note');
+  if(note) note.style.display=dirty?'block':'none';
+  const btn=document.getElementById('perm-save-btn');
+  if(btn) btn.classList.toggle('btn-warning',!!dirty);
+}
+
+async function savePermissions(){
+  if(CURRENT_USER?.role!=='admin'){ toast('تعديل الصلاحيات من صلاحية المدير العام فقط','error'); return; }
+  if(!permDraft) permDraftInit();
+
+  // نحذّر من دور بلا أي صفحة — سيدخل صاحبه ولا يجد ما يفتحه
+  const empty=PERM_ROLES.filter(r=>r!=='admin' && !PAGE_CATALOG.some(p=>permDraft[r][p.page]));
+  if(empty.length){
+    const names=empty.map(r=>(ROLES[r]||{}).label||r).join('، ');
+    const ok=await confirm2(
+      `الأدوار التالية بلا أي صفحة: ${names}. من يدخل بها لن يجد شيئاً ليفتحه. حفظ رغم ذلك؟`,
+      'دور بلا صلاحيات','⚠️','حفظ','btn-warning');
+    if(!ok) return;
+  }
+
+  const btn=document.getElementById('perm-save-btn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...'; }
+  try{
+    // المدير العام لا يُخزَّن — hasPerm تمنحه كل شيء دائماً
+    const data={};
+    PERM_ROLES.filter(r=>r!=='admin').forEach(r=>{ data[r]={...permDraft[r]}; });
+    data.updatedAt=new Date().toISOString();
+    data.updatedBy=CURRENT_USER?.name||'';
+    await dbSet('settings/permissions', data);
+    S.settings.permissions=data;
+    buildSidebar();
+    markPermDirty(false);
+    toast('تم حفظ الصلاحيات — سارية على كل الأجهزة ✅','success');
+  }catch(e){ toast('خطأ: '+e.message,'error'); }
+  finally{
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i> حفظ الصلاحيات'; }
+  }
+}
+
+async function resetPermissions(){
+  if(CURRENT_USER?.role!=='admin'){ toast('تعديل الصلاحيات من صلاحية المدير العام فقط','error'); return; }
+  const ok=await confirm2(
+    'سترجع صلاحيات كل الأدوار للتوزيع الافتراضي الأصلي، وتُلغى كل تعديلاتك.',
+    'استعادة الصلاحيات الافتراضية','↩️','استعادة','btn-warning');
+  if(!ok) return;
+  try{
+    await dbRemove('settings/permissions');
+    delete S.settings.permissions;
+    permDraftInit();
+    renderPermMatrix();
+    buildSidebar();
+    toast('تمت استعادة الصلاحيات الافتراضية ✅','success');
+  }catch(e){ toast('خطأ: '+e.message,'error'); }
 }
 
 function loadGeneralSettings(){
@@ -6701,10 +6898,26 @@ window.addEventListener('fbReady',()=>{
 
   // Listen: settings
   listen('settings',v=>{
+    const prevPerms=JSON.stringify(S.settings?.permissions||{});
     S.settings=v||{};
     applyCurrencyLabel(); // تحويل كود العملة للرمز العربي قبل أي عرض
     loadGeneralSettings();
     if(document.getElementById('pg-inv-settings')?.classList.contains('active')) loadInvSettingsUI();
+
+    // تغيّرت الصلاحيات من جهاز آخر → نعيد بناء القائمة، وننقل المستخدم
+    // إن كان واقفاً على صفحة سُحبت منه للتو
+    if(CURRENT_USER && JSON.stringify(S.settings?.permissions||{})!==prevPerms){
+      permDraft=null;
+      buildSidebar();
+      if(document.getElementById('sp-permissions')?.classList.contains('active')) renderPermMatrix();
+      const cur=document.querySelector('.page.active')?.id?.replace(/^pg-/,'');
+      if(cur && !hasPerm(CURRENT_USER.role,cur)){
+        toast('تم تعديل صلاحياتك من قِبل المدير العام','warning');
+        const fb=firstAllowedPage(CURRENT_USER.role);
+        if(fb) nav(fb);
+      }
+    }
+
     renderHomeStats();
     renderSystemInfo();
   });
@@ -8903,7 +9116,7 @@ function renderMyShiftCard(){
     el.innerHTML=`<div style="display:flex;align-items:center;gap:12px;">
       <i class="fas fa-info-circle" style="color:var(--text2);font-size:18px;"></i>
       <div style="font-size:13px;color:var(--text2);">لا توجد وردية مفتوحة لك حالياً — ستُفتح تلقائياً عند بدء العمل.</div>
-      <button class="btn btn-primary btn-sm" style="margin-right:auto;" onclick="ensureMyShift()"><i class="fas fa-play"></i> فتح وردية</button>
+      <button class="btn btn-primary btn-sm" style="margin-right:auto;" onclick="ensureMyShift(true)"><i class="fas fa-play"></i> فتح وردية</button>
     </div>`;
     return;
   }
@@ -14454,10 +14667,12 @@ window.addEventListener('fbReady',()=>{
   listen('lossRecords',v=>{ S.lossRecords=v||{}; });
   listen('shifts',v=>{
     S.shifts=v||{};
+    _shiftsLoaded=true;   // من الآن يجوز فتح وردية جديدة عند الحاجة
     // نُحدّث مرجع الوردية الحالية لو أقفلها المدير العام من جهاز آخر
     if(CURRENT_SHIFT && S.shifts[CURRENT_SHIFT.id]?.status==='closed'){
       toast('تم إقفال ورديتك من قبل المدير العام','warning');
       CURRENT_SHIFT=null;
+      _shiftClosedByAdmin=true;   // لا نفتح بديلة تلقائياً في نفس الجلسة
     }
     ensureMyShift();
     renderShiftIndicator();
@@ -14984,6 +15199,7 @@ window.addEventListener('fbOffline', async ()=>{
     buildUserGrid(S.users||{});
     toast('تم تحميل آخر نسخة محفوظة على الجهاز — وضع أوف لاين','warning');
     // الورديات جاءت من النسخة المحلية — نستعيد وردية المستخدم بدل فتح واحدة جديدة
+    _shiftsLoaded=true;
     if(CURRENT_USER) ensureMyShift();
   }
 });
