@@ -1,0 +1,13 @@
+# النسخ الاحتياطية المحلية — لا تُرفع
+index.backup-*.html
+
+# النظام القديم (مرجع محلي فقط)
+old casheir.html
+
+# ملفات أدوات التطوير المحلية
+.claude/
+
+# ملفات النظام
+Thumbs.db
+desktop.ini
+.DS_Store

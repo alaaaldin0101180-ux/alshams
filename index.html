@@ -1912,7 +1912,7 @@ textarea.fc{resize:vertical;min-height:80px;}
               style="font-size:14px;font-weight:700;padding:7px 12px;text-align:center;">
             <div class="cart-change" id="credit-remain-wrap"
                  style="margin:6px 0 0;padding:4px 10px;font-size:12px;background:var(--red-bg);border-color:var(--red);color:var(--red);">
-              المتبقي ديناً: <strong id="ct-credit-remain">0.00</strong>
+              <span id="ct-credit-remain-lbl">المتبقي ديناً: </span><strong id="ct-credit-remain">0.00</strong>
             </div>
           </div>
 
@@ -4908,6 +4908,8 @@ let CURRENT_SHIFT = null;     // كائن الوردية المفتوحة للم
 let _shiftOpening = false;    // منع فتح وردية مرتين في نفس اللحظة
 
 const SHIFT_STATUS_LABELS={open:'مفتوحة', closed:'مقفلة'};
+// الوردية قد تعبر منتصف الليل، فالتنبيه يعتمد على عدد الساعات لا على تغيّر اليوم
+const SHIFT_STALE_HOURS = 20;
 
 // المدير العام فقط هو من يقفل الورديات
 function canCloseShifts(){ return CURRENT_USER?.role==='admin'; }
@@ -4967,11 +4969,12 @@ async function ensureMyShift(){
   if(existing){
     CURRENT_SHIFT=existing;
     renderShiftIndicator();
-    // تنبيه لو الوردية من يوم سابق ولم يقفلها المدير العام
-    const today=new Date().toISOString().slice(0,10);
-    if(existing.date && existing.date<today && !existing._warned){
+    // الوردية قد تمتد لما بعد منتصف الليل، فلا نحكم عليها بتغيّر التاريخ.
+    // التنبيه يعتمد على طول الوردية فعلياً — أطول من SHIFT_STALE_HOURS يعني غالباً نُسي إقفالها.
+    const hours=(Date.now()-new Date(existing.openedAt).getTime())/3600000;
+    if(hours>=SHIFT_STALE_HOURS && !existing._warned){
       existing._warned=true;
-      toast(`لديك وردية مفتوحة منذ ${existing.date} لم يقفلها المدير العام بعد — كل العمليات تُسجَّل عليها`,'warning');
+      toast(`ورديتك مفتوحة منذ ${Math.floor(hours)} ساعة ولم يقفلها المدير العام — كل العمليات ما زالت تُسجَّل عليها`,'warning');
     }
     return;
   }
@@ -6657,6 +6660,7 @@ window.addEventListener('fbReady',()=>{
         if(fresh&&fresh.status==='active'){
           CURRENT_USER={...fresh,id:CURRENT_USER.id};
           showApp(true); // true = استعادة آخر صفحة
+          ensureMyShift();
         } else {
           localStorage.removeItem('shams-user');
           localStorage.removeItem('shams-last-page');
@@ -7045,10 +7049,16 @@ async function saveProduct(){
   const brId=document.getElementById('pf-branch')?.value||'';
   const catId=document.getElementById('pf-category')?.value||'';
   const whId=document.getElementById('pf-warehouse')?.value||'';
+  // الحقل يَعِد بالتوليد التلقائي لو تُرك فارغاً — ننفّذ الوعد هنا
+  let barcodeVal=document.getElementById('pf-barcode').value?.trim()||'';
+  if(!barcodeVal){
+    barcodeVal=makeInternalBarcode();
+    document.getElementById('pf-barcode').value=barcodeVal;
+  }
   const data={
     name, cost, price, priceWholesale,
-    barcode:document.getElementById('pf-barcode').value?.trim()||'',
-    code:document.getElementById('pf-barcode').value?.trim()||'',
+    barcode:barcodeVal,
+    code:barcodeVal,
     serial:document.getElementById('pf-serial')?.value?.trim()||'',
     cat:catId, category:catId,
     branchId:brId, branch:brId, branchName:getBranchName(brId)||'مركزي',
@@ -8118,17 +8128,20 @@ function calcCreditRemain(){
   let paid=parseFloat(document.getElementById('ct-credit-paid')?.value||0);
   if(!(paid>=0)) paid=0;
   const remain=Math.max(0,total-Math.min(paid,total));
-  const el=document.getElementById('ct-credit-remain');
-  if(el) el.textContent=remain.toFixed(2)+' '+currency;
   const box=document.getElementById('credit-remain-wrap');
   if(box){
     const full=remain<=0;
-    box.style.background=full?'var(--green-bg)':'var(--red-bg)';
-    box.style.borderColor=full?'var(--green)':'var(--red)';
-    box.style.color=full?'var(--green)':'var(--red)';
-    box.innerHTML=full
-      ? `مدفوعة بالكامل — لا يوجد دين`
-      : `المتبقي ديناً: <strong id="ct-credit-remain">${remain.toFixed(2)} ${currency}</strong>`;
+    box.style.background =full?'var(--green-bg)':'var(--red-bg)';
+    box.style.borderColor=full?'var(--green)'   :'var(--red)';
+    box.style.color      =full?'var(--green)'   :'var(--red)';
+    // نُحدّث نص العنصر الثابت فقط — بدون إعادة بناء innerHTML حتى لا يتكرر المعرّف
+    const lbl=document.getElementById('ct-credit-remain-lbl');
+    const val=document.getElementById('ct-credit-remain');
+    if(lbl) lbl.textContent = full ? 'مدفوعة بالكامل — لا يوجد دين' : 'المتبقي ديناً: ';
+    if(val){
+      val.style.display = full ? 'none' : '';
+      val.textContent   = remain.toFixed(2)+' '+currency;
+    }
   }
   return remain;
 }
@@ -8760,6 +8773,30 @@ function setShiftRange(range){
   renderShifts();
 }
 
+// تاريخ + وقت مختصر — الوقت ضروري لتمييز وردية تعبر منتصف الليل
+function fShiftMoment(iso){
+  if(!iso) return '—';
+  try{
+    const d=new Date(iso);
+    return d.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit'})+' '+
+           d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return iso; }
+}
+
+// هل تتقاطع فترة الوردية مع المدى المطلوب؟
+// الوردية قد تبدأ 11 مساءً وتنتهي 3 صباحاً، فلا يصح الاكتفاء بتاريخ الفتح —
+// نطابق بالتداخل: تظهر الوردية طالما كان أي جزء منها داخل المدى.
+function shiftOverlapsRange(sh, from, to){
+  if(!from && !to) return true;
+  const start=(sh.openedAt||sh.date||'').slice(0,10);
+  // الوردية المفتوحة ممتدة حتى اللحظة الحالية
+  const end=(sh.closedAt ? sh.closedAt.slice(0,10) : new Date().toISOString().slice(0,10));
+  if(!start) return false;
+  if(from && end < from) return false;   // انتهت قبل بداية المدى
+  if(to   && start > to) return false;   // بدأت بعد نهاية المدى
+  return true;
+}
+
 // غير المدير العام يرى وردياته فقط
 function visibleShifts(){
   const all=Object.entries(S.shifts||{});
@@ -8780,9 +8817,8 @@ function renderShifts(){
   const currency=S.settings?.general?.currency||'EGP';
 
   const rows=visibleShifts().filter(([,sh])=>{
-    const d=(sh.date||sh.openedAt||'').slice(0,10);
     return (!uF||sh.userId===uF) && (!rF||sh.role===rF) && (!bF||sh.branchId===bF)
-        && (!stF||sh.status===stF) && (!from||d>=from) && (!to||d<=to);
+        && (!stF||sh.status===stF) && shiftOverlapsRange(sh, from, to);
   }).sort(([,a],[,b])=>(b.openedAt||'').localeCompare(a.openedAt||''));
 
   // إحصائيات
@@ -8822,8 +8858,8 @@ function renderShifts(){
       <td><strong>${sh.userName||'—'}</strong></td>
       <td><span class="badge ${(ROLES[sh.role]||{}).badge||'badge-info'}">${sh.roleLabel||(ROLES[sh.role]||{}).label||'—'}</span></td>
       <td style="font-size:11px;">${sh.branchName||'مركزي'}</td>
-      <td style="font-size:11px;color:var(--text2);">${fDateShort(sh.openedAt)}</td>
-      <td style="font-size:11px;color:var(--text2);">${sh.closedAt?fDateShort(sh.closedAt):'—'}</td>
+      <td style="font-size:11px;color:var(--text2);">${fShiftMoment(sh.openedAt)}</td>
+      <td style="font-size:11px;color:var(--text2);">${sh.closedAt?fShiftMoment(sh.closedAt):'—'}</td>
       <td style="font-size:11px;">${dur}</td>
       <td style="font-weight:700;color:var(--accent);">${(t.salesTotal||0).toFixed(0)}</td>
       <td style="color:var(--yellow);">${(t.expTotal||0).toFixed(0)}</td>
@@ -11468,8 +11504,46 @@ function onTrToChange() {
   if(info) info.textContent = wh ? `${wh.name} (${getBranchName(wh.branchId)||'مركزي'})` : '';
 }
 
+// ── توليد باركود داخلي ──
+// EAN-13 ببادئة 200 — النطاق المخصص للاستخدام الداخلي داخل المحل،
+// فلا يتعارض مع باركودات المصانع، ويُقرأ على أي ماسح عادي.
+function ean13CheckDigit(d12){
+  let sum=0;
+  for(let i=0;i<12;i++) sum += (+d12[i]) * (i%2===0?1:3);
+  return String((10 - (sum%10)) % 10);
+}
+
+function makeInternalBarcode(){
+  const used=new Set(Object.values(S.products||{}).map(p=>String(p.barcode||p.code||'')));
+  for(let attempt=0; attempt<50; attempt++){
+    const body='200'+String(Math.floor(Math.random()*1e9)).padStart(9,'0');
+    const code=body+ean13CheckDigit(body);
+    if(!used.has(code)) return code;
+  }
+  // احتياطي شديد الندرة: نرجع رقماً زمنياً فريداً
+  return '200'+Date.now().toString().slice(-10);
+}
+
+function genBarcode(){
+  const el=document.getElementById('pf-barcode'); if(!el) return;
+  const cur=(el.value||'').trim();
+  if(cur){
+    // لا نمسح كوداً موجوداً بالغلط
+    if(!window.confirm(`سيتم استبدال الباركود الحالي (${cur}) بآخر جديد. متابعة؟`)) return;
+  }
+  el.value=makeInternalBarcode();
+  toast('تم توليد باركود داخلي فريد ✅');
+}
+
 function addTrItem() {
   trItems.push({prodId:'',name:'',qty:1,available:0});
+  renderTrItems();
+}
+
+function removeTrItem(i) {
+  trItems.splice(i,1);
+  // نُبقي سطراً فارغاً واحداً على الأقل حتى لا تصبح القائمة بلا مدخل
+  if(!trItems.length) trItems=[{prodId:'',name:'',qty:1,available:0}];
   renderTrItems();
 }
 
@@ -14398,10 +14472,11 @@ window.addEventListener('fbReady',()=>{
 // ============================================================
 
 const IDB = {
-  db:null, DB_NAME:'shams_offline', DB_VERSION:1,
+  // v2: أُضيف مخزن shifts — رفع الرقم ضروري ليعمل onupgradeneeded على الأجهزة القديمة
+  db:null, DB_NAME:'shams_offline', DB_VERSION:2,
   STORES:['users','branches','settings','returns','customers','cashboxes','cashboxLog',
           'stockTransfers','lossRecords','warehouses','products','categories','suppliers',
-          'purchaseOrders','sales','expenses','movements','pending_queue'],
+          'purchaseOrders','sales','expenses','movements','shifts','pending_queue'],
   open(){
     return new Promise((resolve,reject)=>{
       if(this.db){ resolve(this.db); return; }
@@ -14610,7 +14685,7 @@ const OM = {
   async syncToIDB(){
     const stores=['users','branches','returns','customers','cashboxes','cashboxLog',
                   'stockTransfers','lossRecords','warehouses','products','categories',
-                  'suppliers','purchaseOrders','sales','expenses','movements'];
+                  'suppliers','purchaseOrders','sales','expenses','movements','shifts'];
     for(const st of stores){
       if(S[st]&&Object.keys(S[st]).length) await IDB.saveStore(st,S[st]).catch(()=>{});
     }
@@ -14622,7 +14697,7 @@ const OM = {
   async loadFromIDB(){
     const stores=['users','branches','returns','customers','cashboxes','cashboxLog',
                   'stockTransfers','lossRecords','warehouses','products','categories',
-                  'suppliers','purchaseOrders','sales','expenses','movements'];
+                  'suppliers','purchaseOrders','sales','expenses','movements','shifts'];
     let found=false;
     for(const st of stores){
       const d=await IDB.getStore(st);
@@ -14908,6 +14983,8 @@ window.addEventListener('fbOffline', async ()=>{
     document.getElementById('offline-badge')?.classList.add('show');
     buildUserGrid(S.users||{});
     toast('تم تحميل آخر نسخة محفوظة على الجهاز — وضع أوف لاين','warning');
+    // الورديات جاءت من النسخة المحلية — نستعيد وردية المستخدم بدل فتح واحدة جديدة
+    if(CURRENT_USER) ensureMyShift();
   }
 });
 
