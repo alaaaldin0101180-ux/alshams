@@ -888,6 +888,12 @@ textarea.fc{resize:vertical;min-height:80px;}
 .cashbox-balance.negative{color:var(--red);}
 .cashbox-type{font-size:11px;color:var(--text2);margin-bottom:8px;}
 
+/* الفاتورة المصممة: تصفير letter-spacing إلزامي.
+   html2canvas يقسّم النص إلى حروف مفردة عند وجود تباعد بينها، فينكسر
+   تشكيل العربية المتصلة («فاتورة بيع» تخرج «فتاورقيع»). القاعدة العامة
+   thead th تضع تباعداً 0.4px فكانت تُفسد رؤوس جدول الفاتورة عند التصدير. */
+#inv-content, #inv-content *{letter-spacing:normal!important;text-transform:none!important;}
+
 /* ===== الطباعة =====
    شبكة أمان: لو طُبعت الصفحة نفسها لأي سبب، لا تظهر عناصر الواجهة
    (القائمة الجانبية، الشريط العلوي، الأزرار، الخلفيات المتحركة).
@@ -3980,7 +3986,6 @@ textarea.fc{resize:vertical;min-height:80px;}
     <div class="modal-foot" style="flex-wrap:wrap;gap:7px;">
       <button class="btn btn-ghost" onclick="closeModal('modal-inv-view')">إغلاق</button>
       <button class="btn btn-ghost" onclick="exportInvImage()"><i class="fas fa-image"></i> صورة PNG</button>
-      <button class="btn btn-ghost" onclick="exportInvWord()"><i class="fas fa-file-word"></i> Word</button>
       <button class="btn btn-primary" onclick="printInvoiceDoc()"><i class="fas fa-print"></i> طباعة / PDF</button>
     </div>
   </div>
@@ -9797,7 +9802,7 @@ function buildInvoiceHTML(sale){
         </div>
       </div>
       <div style="text-align:left;">
-        <div style="font-size:22px;font-weight:900;letter-spacing:1px;">${ivGet('inv-title-text')}</div>
+        <div style="font-size:22px;font-weight:900;">${ivGet('inv-title-text')}</div>
         <div style="font-size:10px;">${ivGet('inv-title-sub')}</div>
       </div>
     </div>
@@ -9938,47 +9943,47 @@ function printInvoiceDoc(){
   w.document.write(html); w.document.close();
 }
 
-function exportInvImage(){
+// ============================================================
+// تصدير الفاتورة صورة PNG
+// ============================================================
+// html2canvas كان يرسم الحروف واحداً واحداً على الكانفس فيكسر تشكيل
+// العربية المتصلة («فاتورة بيع» تخرج «فتاورقيع»). البديل هنا يلفّ الفاتورة
+// داخل <foreignObject> في SVG، فيرسمها المتصفح بمحرّك النصوص الحقيقي
+// بتشكيل عربي سليم، ثم نرسم الناتج على كانفس بدقة مضاعفة.
+
+async function exportInvImage(){
   const content=document.getElementById('inv-content');
   if(!content){ toast('لا توجد فاتورة','error'); return; }
   if(typeof html2canvas!=='function'){ toast('مكتبة الصور غير محمّلة — تأكد من الاتصال بالإنترنت','error'); return; }
-  toast('جاري تصدير الصورة...','info');
-  html2canvas(content,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,allowTaint:true})
-    .then(canvas=>{
-      const link=document.createElement('a');
-      link.download='invoice-'+(window._invSale?.invNumber||Date.now())+'.png';
-      link.href=canvas.toDataURL('image/png');
-      link.click();
-      toast('تم تصدير الفاتورة كصورة ✅');
-    })
-    .catch(e=>toast('خطأ في تصدير الصورة: '+e.message,'error'));
-}
 
-function exportInvWord(){
-  const content=document.getElementById('inv-content');
-  if(!content){ toast('لا توجد فاتورة للتصدير','error'); return; }
-  const g=S.settings?.general||{};
-  const company=g.name||g.sysName||'الشمس';
-  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="UTF-8"><title>فاتورة - ${company}</title>
-<style>
-  @page{size:A4;margin:15mm 12mm;}
-  body{font-family:Arial,sans-serif;direction:rtl;color:#111;font-size:11pt;margin:0;padding:0;}
-  table{border-collapse:collapse;width:100%;}
-  th,td{text-align:right;direction:rtl;}
-</style>
-<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
-</head><body>${content.outerHTML}
-<div style="padding:8pt 16pt;text-align:center;font-size:8pt;color:#666;border-top:1pt solid #e0e0e0;margin-top:10pt;">
-  تم إنشاء هذه الفاتورة بواسطة نظام الشمس — ${company}${g.phone?' | 📞 '+g.phone:''}
-</div></body></html>`;
-  const blob=new Blob(['﻿'+html],{type:'application/msword;charset=utf-8'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='فاتورة-'+(window._invSale?.invNumber||Date.now())+'.doc';
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-  toast('تم تصدير الفاتورة بصيغة Word ✅');
+  // ملاحظة: بديل SVG + foreignObject يرسم العربية بشكل مثالي، لكن كروم
+  // يلوّث الكانفس عند رسم foreignObject فيرفض toDataURL. لذلك نبقى على
+  // html2canvas بعد إزالة سبب تكسير الحروف (تباعد الأحرف).
+  toast('جاري تصدير الصورة...','info');
+  try{
+    const canvas=await html2canvas(content,{
+      scale:3,                 // دقة عالية تكفي للطباعة والإرسال على واتساب
+      useCORS:true,
+      backgroundColor:'#ffffff',
+      logging:false,
+      allowTaint:false,
+      // ضمانة إضافية داخل النسخة التي يرسمها html2canvas
+      onclone:doc=>{
+        doc.querySelectorAll('#inv-content, #inv-content *').forEach(el=>{
+          el.style.letterSpacing='normal';
+          el.style.textTransform='none';
+        });
+      },
+    });
+    const link=document.createElement('a');
+    link.download='فاتورة-'+(window._invSale?.invNumber||Date.now())+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    toast('تم تصدير الفاتورة كصورة ✅');
+  }catch(e){
+    console.warn('فشل تصدير الصورة',e);
+    toast('تعذّر تصدير الصورة: '+e.message+' — يمكنك استخدام «طباعة / PDF»','error');
+  }
 }
 
 // ============================================================
