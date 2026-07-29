@@ -676,12 +676,15 @@ textarea.fc{resize:vertical;min-height:80px;}
 /* =============================================
    CASHIER LAYOUT
 ============================================= */
-#pg-cashier{--csbar-h:122px;}
+/* --csbar-gap: مسافة رفع الشريط السفلي عن حافة الشاشة حتى لا يلامس شريط مهام الويندوز
+   --csbar-h  : ارتفاع الشريط نفسه (يُستخدم في حساب ارتفاع شبكة المنتجات) */
+#pg-cashier{--csbar-h:132px;--csbar-gap:18px;}
 .cashier-layout{display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start;}
 .cashier-products{min-width:0;}
 .cashier-products-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
-  gap:10px;max-height:calc(100vh - 175px - var(--csbar-h));overflow-y:auto;padding:2px;
+  /* 237px = ارتفاع الترويسة وشريط الفلاتر فوق الشبكة + مسافة 10px عن الشريط السفلي */
+  gap:10px;max-height:calc(100vh - 237px - var(--csbar-h) - var(--csbar-gap));overflow-y:auto;padding:2px;
 }
 .cs-product-card{
   background:var(--card);border:1px solid var(--border);border-radius:10px;
@@ -709,8 +712,8 @@ textarea.fc{resize:vertical;min-height:80px;}
   background:var(--card);border:1px solid var(--border);border-radius:12px;
   display:flex;flex-direction:column;
   position:sticky;top:70px;
-  height:calc(100vh - 90px - var(--csbar-h));
-  max-height:calc(100vh - 90px - var(--csbar-h));
+  height:calc(100vh - 90px - var(--csbar-h) - var(--csbar-gap));
+  max-height:calc(100vh - 90px - var(--csbar-h) - var(--csbar-gap));
   overflow:hidden;
 }
 .cart-header{
@@ -739,6 +742,22 @@ textarea.fc{resize:vertical;min-height:80px;}
 .cart-item-total{font-size:13px;font-weight:700;color:var(--accent);width:62px;text-align:left;}
 .cart-item-del{color:var(--text3);cursor:pointer;font-size:13px;transition:color .15s;padding:4px;}
 .cart-item-del:hover{color:var(--red);}
+/* خصم الصنف داخل السلة */
+.cart-item-disc{display:flex;align-items:center;gap:4px;margin-top:4px;}
+.cart-item-disc .lbl{font-size:10.5px;color:var(--text3);font-weight:600;}
+.cart-disc-input{
+  width:54px;padding:2px 5px;font-size:11px;text-align:center;font-family:'Cairo',sans-serif;
+  border:1px solid var(--border);border-radius:6px;background:var(--card2);color:var(--text);
+}
+.cart-disc-input:focus{outline:none;border-color:var(--accent);}
+.cart-disc-type{
+  border:1px solid var(--border);background:var(--card2);color:var(--text2);
+  border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;
+  font-family:'Cairo',sans-serif;transition:all .15s;
+}
+.cart-disc-type:hover{border-color:var(--accent);color:var(--accent);}
+.cart-disc-type.on{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+.cart-item-oldprice{text-decoration:line-through;color:var(--text3);font-size:10.5px;margin-left:4px;}
 
 .cart-totals{
   padding:10px 16px;border-top:1px solid var(--border);
@@ -790,11 +809,14 @@ textarea.fc{resize:vertical;min-height:80px;}
 
 /* ── Cashier Bottom Action Bar — شريط إجراءات الكاشير السفلي ── */
 .cashier-bottombar{
-  position:fixed;bottom:0;left:0;right:240px;height:var(--csbar-h);
-  background:var(--bg2);border-top:1px solid var(--border);
-  display:flex;align-items:stretch;gap:10px;padding:10px 18px;
+  /* height:auto — الشريط يكبر مع محتواه فلا تُقص خانة الملاحظات أبداً.
+     --csbar-h يُحدَّث تلقائياً من JS ليعكس الارتفاع الفعلي لحسابات الشبكة والسلة. */
+  position:fixed;bottom:var(--csbar-gap);left:14px;right:254px;
+  height:auto;min-height:var(--csbar-h);
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  display:flex;align-items:stretch;gap:10px;padding:12px 18px;
   z-index:150;overflow:visible;
-  box-shadow:0 -8px 24px rgba(0,0,0,.15);
+  box-shadow:0 -8px 28px rgba(0,0,0,.22);
 }
 [data-theme="dark"] .cashier-bottombar{background:rgba(21,21,40,.97);backdrop-filter:blur(16px);}
 [data-theme="light"] .cashier-bottombar{background:rgba(240,240,255,.95);backdrop-filter:blur(16px);}
@@ -827,7 +849,7 @@ textarea.fc{resize:vertical;min-height:80px;}
 }
 
 @media(max-width:1360px){
-  #pg-cashier{--csbar-h:0px;}
+  #pg-cashier{--csbar-h:0px;--csbar-gap:0px;}
   .cashier-bottombar{
     position:static;height:auto;flex-wrap:wrap;
     border:1px solid var(--border);border-radius:12px;margin-top:14px;
@@ -1795,14 +1817,18 @@ textarea.fc{resize:vertical;min-height:80px;}
             <div class="csb-group-title"><i class="fas fa-user"></i> العميل (اختياري)</div>
             <div class="fg" style="gap:0;">
               <div style="display:flex;gap:6px;align-items:center;">
-                <input class="fc" id="cs-customer" placeholder="اسم العميل أو نقدي..." style="flex:1;font-size:12px;padding:7px 10px;" oninput="clearSelectedCustomer()">
-                <button class="btn btn-ghost btn-xs" onclick="pickCustomerForSale()" title="اختر من القائمة"><i class="fas fa-search"></i></button>
+                <input class="fc" id="cs-customer" placeholder="ابحث بالاسم أو رقم الهاتف..." autocomplete="off"
+                       style="flex:1;font-size:12px;padding:7px 10px;"
+                       oninput="onCsCustomerInput(this.value)"
+                       onfocus="onCsCustomerFocus()"
+                       onkeydown="onCsCustomerKeydown(event)">
+                <button class="btn btn-ghost btn-xs" id="cs-cust-search-btn" onclick="pickCustomerForSale()" title="عرض كل العملاء"><i class="fas fa-search"></i></button>
                 <button class="btn btn-ghost btn-xs" onclick="togglePosAddCust()" title="إضافة عميل جديد سريع" style="color:var(--green);border-color:var(--green);"><i class="fas fa-user-plus"></i></button>
               </div>
               <input type="hidden" id="cs-customer-id" value="">
             </div>
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap;">الخصم</span>
+              <span style="font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap;">خصم الفاتورة</span>
               <input class="fc" id="ct-discount" type="number" min="0" value="0"
                 oninput="if(this.value<0)this.value=0; calcCart()" style="width:70px;padding:4px 8px;font-size:12px;text-align:center;">
               <select class="fc" id="ct-discount-type" onchange="calcCart()" style="width:55px;padding:4px 6px;font-size:12px;">
@@ -1822,6 +1848,14 @@ textarea.fc{resize:vertical;min-height:80px;}
               <div class="csb-total-item">
                 <span class="lbl">المجموع</span>
                 <span class="val" id="ct-subtotal">0.00</span>
+              </div>
+              <div class="csb-total-item" id="ct-items-disc-wrap" style="display:none;">
+                <span class="lbl">خصم الأصناف</span>
+                <span class="val" id="ct-items-disc" style="color:var(--red);">0.00</span>
+              </div>
+              <div class="csb-total-item" id="ct-inv-disc-wrap" style="display:none;">
+                <span class="lbl">خصم الفاتورة</span>
+                <span class="val" id="ct-inv-disc" style="color:var(--red);">0.00</span>
               </div>
               <div class="csb-total-item">
                 <span class="lbl">الضريبة (<span id="ct-vat-pct">0</span>%)</span>
@@ -1867,6 +1901,18 @@ textarea.fc{resize:vertical;min-height:80px;}
               oninput="calcChange()" style="font-size:14px;font-weight:700;padding:7px 12px;text-align:center;">
             <div class="cart-change" id="cart-change-wrap" style="display:none;margin:6px 0 0;padding:4px 10px;font-size:12px;">
               الباقي: <strong id="ct-change">0.00</strong>
+            </div>
+          </div>
+
+          <!-- بيع آجل: دفعة مقدمة + المتبقي ديناً -->
+          <div class="csb-group" id="credit-paid-wrap" style="min-width:165px;gap:0;display:none;">
+            <div class="csb-group-title" style="margin-bottom:6px;"><i class="fas fa-hand-holding-usd"></i> المدفوع مقدماً</div>
+            <input class="fc" id="ct-credit-paid" type="number" min="0" value="0"
+              oninput="if(this.value<0)this.value=0; calcCreditRemain()" placeholder="0 = دين كامل"
+              style="font-size:14px;font-weight:700;padding:7px 12px;text-align:center;">
+            <div class="cart-change" id="credit-remain-wrap"
+                 style="margin:6px 0 0;padding:4px 10px;font-size:12px;background:var(--red-bg);border-color:var(--red);color:var(--red);">
+              المتبقي ديناً: <strong id="ct-credit-remain">0.00</strong>
             </div>
           </div>
 
@@ -3681,9 +3727,45 @@ textarea.fc{resize:vertical;min-height:80px;}
       <button class="btn btn-ghost" onclick="closeModal('modal-receipt')">إغلاق</button>
       <button class="btn btn-ghost" onclick="window._lastSale?showInvoice(window._lastSale):toast('لا توجد فاتورة','error')"><i class="fas fa-file-invoice"></i> الفاتورة المصممة</button>
       <button class="btn btn-primary" onclick="printReceipt()"><i class="fas fa-print"></i> طباعة</button>
+      <button class="btn" style="background:#25D366;border-color:#25D366;color:#fff;" onclick="sendSaleWhatsApp()"><i class="fab fa-whatsapp"></i> واتساب</button>
       <button class="btn btn-success" onclick="newSale()"><i class="fas fa-plus"></i> بيع جديد</button>
     </div>
   </div>
+</div>
+
+<!-- =============================================
+     MODAL: رقم واتساب لإرسال الفاتورة
+============================================= -->
+<div class="overlay" id="modal-wa-phone">
+<div class="modal sm">
+  <div class="modal-head">
+    <h3><i class="fab fa-whatsapp" style="color:#25D366;"></i> إرسال الفاتورة على واتساب</h3>
+    <button class="close-btn" onclick="closeModal('modal-wa-phone')"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7;" id="wa-phone-hint">
+      لا يوجد رقم محفوظ لهذا العميل — أدخل رقم واتساب لإرسال الفاتورة عليه.
+    </div>
+    <div class="fg">
+      <label>رقم الواتساب *</label>
+      <input class="fc" id="wa-phone-input" type="tel" placeholder="01012345678 أو 201012345678"
+             oninput="previewWaPhone()" onkeydown="if(event.key==='Enter')confirmWaPhone()">
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;" id="wa-phone-preview">
+        سيُرسل إلى: —
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;margin-top:10px;">
+      <input type="checkbox" id="wa-save-phone" checked>
+      <span>حفظ الرقم في ملف العميل</span>
+    </label>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal('modal-wa-phone')">إلغاء</button>
+    <button class="btn" style="background:#25D366;border-color:#25D366;color:#fff;" onclick="confirmWaPhone()">
+      <i class="fab fa-whatsapp"></i> فتح واتساب
+    </button>
+  </div>
+</div>
 </div>
 
 <!-- =============================================
@@ -4648,6 +4730,28 @@ textarea.fc{resize:vertical;min-height:80px;}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;background:var(--card2);border-radius:9px;padding:10px 14px;">
       <span style="font-size:13px;font-weight:700;color:var(--text2);">إجمالي قيمة المرتجع:</span>
       <span style="font-size:18px;font-weight:900;color:var(--red);" id="retf-total-val">0.00</span>
+    </div>
+
+    <!-- توزيع المرتجع تلقائياً: خصم من الدين + استرداد نقدي -->
+    <div id="retf-split-box" style="display:none;border:1px solid var(--border);border-radius:9px;padding:11px 14px;margin-bottom:12px;background:var(--card2);">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;">
+        <i class="fas fa-random" style="color:var(--accent);"></i> توزيع قيمة المرتجع تلقائياً
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;">
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text2);">دين العميل على هذه الفاتورة:</span>
+          <strong id="retf-sale-debt" style="color:var(--yellow);">0.00</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text2);">يُخصم من الدين:</span>
+          <strong id="retf-debt-cut" style="color:var(--green);">0.00</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text2);" id="retf-cash-lbl">يُرد نقداً من الخزينة:</span>
+          <strong id="retf-cash-back" style="color:var(--red);">0.00</strong>
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:var(--text3);margin-top:7px;line-height:1.6;" id="retf-split-hint"></div>
     </div>
 
     <!-- طريقة الاسترداد + السبب -->
@@ -7678,7 +7782,31 @@ function renderCashier(){
   populateCsWhFilter();
   populateCsCashbox(payMethod||'cash');
   updateHeldBadge();
+  syncCsBarHeight();
 }
+
+// ============================================================
+// يزامن ارتفاع الشريط السفلي الفعلي مع متغير --csbar-h
+// حتى لا تختبئ شبكة المنتجات أو السلة خلفه مهما تغيّر محتواه
+// ============================================================
+function syncCsBarHeight(){
+  const bar = document.getElementById('cashier-bottombar');
+  const pg  = document.getElementById('pg-cashier');
+  if(!bar||!pg) return;
+  // في الشاشات الصغيرة يصير الشريط ضمن تدفق الصفحة فلا حاجة للحساب
+  if(getComputedStyle(bar).position!=='fixed'){ pg.style.removeProperty('--csbar-h'); return; }
+  const h = Math.ceil(bar.getBoundingClientRect().height);
+  if(h>0) pg.style.setProperty('--csbar-h', h+'px');
+}
+
+// يراقب أي تغيّر في محتوى الشريط (ظهور خانة الدفع المقدم، لف العناصر...) ويعيد الحساب
+(function watchCsBar(){
+  const bar=document.getElementById('cashier-bottombar');
+  if(!bar) return;
+  if(window.ResizeObserver) new ResizeObserver(()=>syncCsBarHeight()).observe(bar);
+  window.addEventListener('resize',syncCsBarHeight);
+  setTimeout(syncCsBarHeight,300);
+})();
 
 // مخازن الفرع الحالي فقط (الأدمن يرى الكل)
 function populateCsWhFilter(){
@@ -7820,6 +7948,7 @@ function addToCart(productId){
       price:productPrice(p,saleMode),   // السعر حسب وضع البيع الحالي
       priceMode:saleMode,
       priceLocked:false,                // يتبع الوضع العام حتى يغيّره الكاشير يدوياً
+      disc:0, discType:'fixed',         // خصم خاص بهذا الصنف (قيمة ثابتة أو نسبة)
       cost:+p.cost||0, qty:1, maxQty:p.qty, emoji:p.emoji||'📦',
     });
   }
@@ -7838,6 +7967,32 @@ function updateCartQty(idx,delta){
 function removeFromCart(idx){ cart.splice(idx,1); renderCart(); calcCart(); }
 function clearCart(){ cart=[]; renderCart(); calcCart(); }
 
+// ── خصم لكل صنف على حِدة ──
+// قيمة الخصم للصنف الواحد (بالعملة) — محسوبة على إجمالي السطر ومحدودة به
+function lineGross(item){ return (+item.price||0)*(+item.qty||0); }
+function lineDiscount(item){
+  const gross=lineGross(item);
+  let d=+item.disc||0;
+  if(!(d>0)) return 0;
+  if((item.discType||'fixed')==='pct'){ d=Math.min(100,d); return gross*d/100; }
+  return Math.min(gross,d);
+}
+function lineNet(item){ return Math.max(0, lineGross(item)-lineDiscount(item)); }
+
+function updateCartItemDisc(idx,val){
+  const item=cart[idx]; if(!item) return;
+  let v=parseFloat(val); if(!(v>=0)) v=0;
+  if((item.discType||'fixed')==='pct') v=Math.min(100,v);
+  item.disc=v;
+  renderCart(); calcCart();
+}
+function toggleCartItemDiscType(idx){
+  const item=cart[idx]; if(!item) return;
+  item.discType=(item.discType||'fixed')==='fixed'?'pct':'fixed';
+  if(item.discType==='pct') item.disc=Math.min(100,+item.disc||0);
+  renderCart(); calcCart();
+}
+
 function renderCart(){
   const el=document.getElementById('cart-items'); if(!el) return;
   const currency=S.settings?.general?.currency||'EGP';
@@ -7849,6 +8004,9 @@ function renderCart(){
     const mode=item.priceMode||'retail';
     const p=(S.products||{})[item.productId];
     const canToggle=hasWholesalePrice(p)||mode==='wholesale';
+    const dType=item.discType||'fixed';
+    const dAmt =lineDiscount(item);
+    const gross=lineGross(item);
     return `
     <div class="cart-item">
       <div style="font-size:18px;">${item.emoji}</div>
@@ -7862,13 +8020,28 @@ function renderCart(){
             ${PRICE_MODE_LABELS[mode]}${item.priceLocked?' 🔒':''}
           </button>
         </div>
+        <div class="cart-item-disc">
+          <span class="lbl">خصم</span>
+          <input class="cart-disc-input" type="number" min="0" ${dType==='pct'?'max="100"':''}
+                 value="${+item.disc||0}"
+                 onchange="updateCartItemDisc(${i},this.value)"
+                 title="خصم خاص بهذا الصنف">
+          <button class="cart-disc-type ${dAmt>0?'on':''}" onclick="toggleCartItemDiscType(${i})"
+                  title="اضغط للتبديل بين خصم بقيمة ثابتة أو بنسبة مئوية">
+            ${dType==='pct'?'%':currency}
+          </button>
+          ${dAmt>0?`<span style="font-size:10.5px;color:var(--red);font-weight:700;">- ${dAmt.toFixed(2)}</span>`:''}
+        </div>
       </div>
       <div class="cart-qty-wrap">
         <button class="cart-qty-btn" onclick="updateCartQty(${i},-1)">−</button>
         <span class="cart-qty-val">${item.qty}</span>
         <button class="cart-qty-btn" onclick="updateCartQty(${i},1)">+</button>
       </div>
-      <div class="cart-item-total">${(item.price*item.qty).toFixed(2)}</div>
+      <div class="cart-item-total">
+        ${lineNet(item).toFixed(2)}
+        ${dAmt>0?`<div class="cart-item-oldprice">${gross.toFixed(2)}</div>`:''}
+      </div>
       <i class="fas fa-times cart-item-del" onclick="removeFromCart(${i})"></i>
     </div>`;
   }).join('');
@@ -7878,22 +8051,64 @@ function renderCart(){
 function calcCart(){
   const currency=S.settings?.general?.currency||'EGP';
   const vat=parseFloat(S.settings?.general?.vat||0)/100;
-  const subtotal=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const subtotal=cart.reduce((s,i)=>s+lineGross(i),0);
+  // 1) خصومات الأصناف تُخصم أولاً من إجمالي كل سطر
+  const itemsDiscount=cart.reduce((s,i)=>s+lineDiscount(i),0);
+  const afterItems=Math.max(0,subtotal-itemsDiscount);
+  // 2) خصم الفاتورة يُطبَّق على المتبقي بعد خصومات الأصناف
   let discountVal=parseFloat(document.getElementById('ct-discount')?.value||0);
   if(!(discountVal>=0)) discountVal=0; // منع القيم السالبة (بترفع الإجمالي بدل ما تخصم منه)
   const discountType=document.getElementById('ct-discount-type')?.value||'fixed';
   if(discountType==='pct') discountVal=Math.min(100,discountVal); // منع أكتر من 100%
-  const discount=Math.min(subtotal, discountType==='pct'?subtotal*discountVal/100:discountVal);
-  const afterDiscount=Math.max(0,subtotal-discount);
+  const invDiscount=Math.min(afterItems, discountType==='pct'?afterItems*discountVal/100:discountVal);
+  const discount=itemsDiscount+invDiscount;          // إجمالي الخصم المسجَّل على الفاتورة
+  const afterDiscount=Math.max(0,afterItems-invDiscount);
   const vatAmt=afterDiscount*vat;
   const total=afterDiscount+vatAmt;
 
   document.getElementById('ct-subtotal').textContent=subtotal.toFixed(2)+' '+currency;
+  const idWrap=document.getElementById('ct-items-disc-wrap');
+  if(idWrap){
+    idWrap.style.display=itemsDiscount>0?'flex':'none';
+    const el=document.getElementById('ct-items-disc');
+    if(el) el.textContent='-'+itemsDiscount.toFixed(2)+' '+currency;
+  }
+  const ivWrap=document.getElementById('ct-inv-disc-wrap');
+  if(ivWrap){
+    ivWrap.style.display=invDiscount>0?'flex':'none';
+    const el=document.getElementById('ct-inv-disc');
+    if(el) el.textContent='-'+invDiscount.toFixed(2)+' '+currency;
+  }
   document.getElementById('ct-vat-pct').textContent=(vat*100).toFixed(0);
   document.getElementById('ct-vat').textContent=vatAmt.toFixed(2)+' '+currency;
   document.getElementById('ct-total').textContent=total.toFixed(2)+' '+currency;
   calcChange();
-  return{subtotal,discount,vatAmt,total};
+  calcCreditRemain();
+  return{subtotal,discount,itemsDiscount,invDiscount,vatAmt,total};
+}
+
+// المتبقي ديناً في البيع الآجل = الإجمالي − الدفعة المقدمة
+function calcCreditRemain(){
+  const wrap=document.getElementById('credit-paid-wrap');
+  if(!wrap||wrap.style.display==='none') return 0;
+  const currency=S.settings?.general?.currency||'EGP';
+  const total=parseFloat(document.getElementById('ct-total')?.textContent||0)||0;
+  let paid=parseFloat(document.getElementById('ct-credit-paid')?.value||0);
+  if(!(paid>=0)) paid=0;
+  const remain=Math.max(0,total-Math.min(paid,total));
+  const el=document.getElementById('ct-credit-remain');
+  if(el) el.textContent=remain.toFixed(2)+' '+currency;
+  const box=document.getElementById('credit-remain-wrap');
+  if(box){
+    const full=remain<=0;
+    box.style.background=full?'var(--green-bg)':'var(--red-bg)';
+    box.style.borderColor=full?'var(--green)':'var(--red)';
+    box.style.color=full?'var(--green)':'var(--red)';
+    box.innerHTML=full
+      ? `مدفوعة بالكامل — لا يوجد دين`
+      : `المتبقي ديناً: <strong id="ct-credit-remain">${remain.toFixed(2)} ${currency}</strong>`;
+  }
+  return remain;
 }
 
 function calcChange(){
@@ -7917,15 +8132,18 @@ function selectPayMethod(btn,method){
   btn.classList.add('active');
   const cashWrap=document.getElementById('cash-received-wrap');
   const changeWrap=document.getElementById('cart-change-wrap');
+  const credWrap=document.getElementById('credit-paid-wrap');
   if(cashWrap) cashWrap.style.display=method==='cash'?'block':'none';
   if(changeWrap) changeWrap.style.display='none';
-  // البيع الآجل: لا خزينة ولا مبلغ مستلم — يُسجّل ديناً على العميل
+  // البيع الآجل: تظهر خانة "المدفوع مقدماً" — لو دفع جزءاً يُودَع في الخزينة والباقي دين
+  if(credWrap) credWrap.style.display=method==='credit'?'flex':'none';
   const cbSel=document.getElementById('cs-cashbox');
+  if(cbSel){ cbSel.disabled=false; cbSel.style.opacity='1'; }
+  populateCsCashbox(method==='credit'?'cash':method);
   if(method==='credit'){
-    if(cbSel){ cbSel.innerHTML='<option value="">-- بدون خزينة (آجل) --</option>'; cbSel.disabled=true; cbSel.style.opacity='.5'; }
-  } else {
-    if(cbSel){ cbSel.disabled=false; cbSel.style.opacity='1'; }
-    populateCsCashbox(method);
+    const pEl=document.getElementById('ct-credit-paid');
+    if(pEl) pEl.value='0';
+    calcCreditRemain();
   }
 }
 
@@ -7987,30 +8205,49 @@ async function completeSale(){
 
   const custId   = document.getElementById('cs-customer-id')?.value||'';
   const custName = document.getElementById('cs-customer')?.value?.trim()||'عميل نقدي';
-  const cbId     = isCredit?'':(document.getElementById('cs-cashbox')?.value||'');
   // البيع الآجل يتطلب عميلاً مسجلاً لتسجيل الدين عليه
   if(isCredit&&!custId){ toast('البيع الآجل يتطلب اختيار عميل مسجل من القائمة (زر البحث أو +)','error'); return; }
+
+  // ── البيع الآجل الجزئي: العميل يدفع جزءاً الآن والباقي يُسجَّل ديناً عليه ──
+  let creditPaid=0;
+  if(isCredit){
+    creditPaid=parseFloat(document.getElementById('ct-credit-paid')?.value||0);
+    if(!(creditPaid>0)) creditPaid=0;
+    creditPaid=Math.min(creditPaid,totals.total);
+  }
+  // المبلغ الذي يدخل الخزينة فعلياً في هذه العملية
+  const paidNow = isCredit ? creditPaid : totals.total;
+  const cbId    = (isCredit&&creditPaid<=0) ? '' : (document.getElementById('cs-cashbox')?.value||'');
+  if(isCredit&&creditPaid>0&&!cbId){
+    toast('اختر الخزينة التي سيُودَع فيها المبلغ المدفوع مقدماً','error'); return;
+  }
+  const balanceDue = Math.max(0, totals.total - paidNow);
 
   const saleData={
     type:'pos',
     invNumber:invNum,
     items:cart.map(i=>({productId:i.productId,name:i.name,qty:i.qty,price:i.price,cost:+i.cost||0,
-                        priceMode:i.priceMode||'retail',total:i.price*i.qty})),
+                        priceMode:i.priceMode||'retail',
+                        // خصم الصنف: القيمة المدخلة، نوعها، وقيمتها المحسوبة بالعملة
+                        disc:+i.disc||0, discType:i.discType||'fixed', discAmt:lineDiscount(i),
+                        gross:lineGross(i), total:lineNet(i)})),
     // وضع البيع العام للفاتورة، و"mixed" لو فيها أصناف بالسعرين معاً
     saleMode: cart.every(i=>(i.priceMode||'retail')===(cart[0].priceMode||'retail'))
               ? (cart[0].priceMode||'retail') : 'mixed',
     subtotal:totals.subtotal,
-    discount:totals.discount,
+    discount:totals.discount,               // إجمالي الخصم (أصناف + فاتورة)
+    itemsDiscount:totals.itemsDiscount||0,  // مجموع خصومات الأصناف
+    invDiscount:totals.invDiscount||0,      // خصم على مستوى الفاتورة
     tax:totals.vatAmt,
     vat:totals.vatAmt,
     total:totals.total,
     payMethod,
     paymentMethod:payMethod,
-    received:isCredit?0:(payMethod==='cash'?received:totals.total),
-    amountPaid:isCredit?0:totals.total,
+    received:isCredit?creditPaid:(payMethod==='cash'?received:totals.total),
+    amountPaid:paidNow,
     change:isCredit?0:change,
-    balance:isCredit?totals.total:0,
-    status:isCredit?'unpaid':'paid',
+    balance:balanceDue,
+    status: balanceDue<=0 ? 'paid' : (paidNow>0?'partial':'unpaid'),
     customer:  custName,
     custName:  custName,
     customerId:custId||'',
@@ -8054,17 +8291,20 @@ async function completeSale(){
         totalBuy:  (+c.totalBuy||0) + totals.total,
         lastVisit: new Date().toISOString(),
       };
-      if(isCredit) custUpdate.balance=(+c.balance||0)+totals.total;
+      // الدين المضاف = الجزء غير المدفوع فقط (يدعم البيع الآجل الجزئي)
+      if(balanceDue>0) custUpdate.balance=(+c.balance||0)+balanceDue;
       await dbUpdate('customers/'+custId,custUpdate);
     }
 
-    // إيداع المبلغ في الخزينة المختارة
-    if(cbId){
+    // إيداع المبلغ المُحصَّل فعلياً في الخزينة المختارة
+    if(cbId&&paidNow>0){
       await addCashboxEntry(
         cbId,
-        totals.total,
+        paidNow,
         'deposit',
-        `مبيعات — فاتورة ${invNum}`,
+        balanceDue>0
+          ? `دفعة مقدمة — فاتورة آجلة ${invNum}`
+          : `مبيعات — فاتورة ${invNum}`,
         saleId
       );
     }
@@ -8092,16 +8332,26 @@ function showReceipt(sale){
   txt+=`${line}\n`;
   sale.items.forEach(i=>{
     const tag = sale.saleMode==='mixed' && i.priceMode ? ` [${PRICE_MODE_LABELS[i.priceMode]}]` : '';
-    txt+=`${i.name}${tag}\n  ${i.qty} × ${i.price.toFixed(2)} = ${i.total.toFixed(2)} ${currency}\n`;
+    const gross = +i.gross || (+i.price||0)*(+i.qty||0);
+    txt+=`${i.name}${tag}\n  ${i.qty} × ${(+i.price).toFixed(2)} = ${gross.toFixed(2)} ${currency}\n`;
+    if(+i.discAmt>0) txt+=`  خصم الصنف: -${(+i.discAmt).toFixed(2)} ${currency} → ${(+i.total).toFixed(2)} ${currency}\n`;
   });
   txt+=`${line}\n`;
   txt+=`المجموع: ${sale.subtotal.toFixed(2)} ${currency}\n`;
-  if(sale.discount>0) txt+=`الخصم: -${sale.discount.toFixed(2)} ${currency}\n`;
+  if(+sale.itemsDiscount>0) txt+=`خصم الأصناف: -${(+sale.itemsDiscount).toFixed(2)} ${currency}\n`;
+  if(+sale.invDiscount>0)   txt+=`خصم الفاتورة: -${(+sale.invDiscount).toFixed(2)} ${currency}\n`;
+  if(sale.discount>0 && !(+sale.itemsDiscount>0||+sale.invDiscount>0))
+    txt+=`الخصم: -${sale.discount.toFixed(2)} ${currency}\n`;
   if(sale.vat>0) txt+=`الضريبة: ${sale.vat.toFixed(2)} ${currency}\n`;
   txt+=`الإجمالي: ${sale.total.toFixed(2)} ${currency}\n`;
   if(sale.payMethod==='cash'){
     txt+=`المدفوع: ${sale.received.toFixed(2)} ${currency}\n`;
     txt+=`الباقي: ${sale.change.toFixed(2)} ${currency}\n`;
+  }
+  // بيع آجل: نوضّح المسدَّد والمتبقي ديناً على العميل
+  if(+sale.balance>0){
+    txt+=`المدفوع الآن: ${(+sale.amountPaid||0).toFixed(2)} ${currency}\n`;
+    txt+=`المتبقي (دين): ${(+sale.balance).toFixed(2)} ${currency}\n`;
   }
   txt+=`${line}\n${center('شكراً لتسوقكم معنا!')}`;
   document.getElementById('receipt-content').textContent=txt;
@@ -8116,52 +8366,278 @@ function printReceipt(){
   w.document.close(); w.print();
 }
 
-function pickCustomerForSale(){
-  // نبني قائمة منسدلة سريعة للبحث عن عميل
-  const q = (document.getElementById('cs-customer')?.value||'').trim().toLowerCase();
-  const matches = filterByBranch(S.customers||{}).filter(([,c])=>
-    !q || (c.name||'').toLowerCase().includes(q) || (c.phone||'').includes(q)
-  ).slice(0,8);
+// ============================================================
+// WHATSAPP — إرسال الفاتورة كنص مباشرةً على واتساب العميل
+// ============================================================
 
-  if(!matches.length){ toast('لا يوجد عملاء مطابقون','info'); return; }
-  if(matches.length===1){
-    document.getElementById('cs-customer').value    = matches[0][1].name;
-    document.getElementById('cs-customer-id').value = matches[0][0];
-    applyCustomerPriceMode(matches[0][0]);
-    toast('تم اختيار العميل: '+matches[0][1].name,'success');
+// مفتاح الدولة الافتراضي (مصر) — يمكن تغييره من إعدادات النظام لاحقاً
+function waCountryCode(){
+  return String(S.settings?.general?.waCountry||'20').replace(/\D/g,'')||'20';
+}
+
+// تحويل أي صيغة رقم محلية إلى الصيغة الدولية التي يقبلها واتساب
+// 01012345678 → 201012345678 | +20 101 234 5678 → 201012345678 | 00201... → 201...
+function normalizeWaPhone(raw){
+  let d=String(raw||'').replace(/[^\d]/g,'');
+  if(!d) return '';
+  const cc=waCountryCode();
+  if(d.startsWith('00')) d=d.slice(2);
+  // الرقم دولي بالفعل
+  if(d.startsWith(cc)&&d.length>=cc.length+9) return d;
+  if(d.startsWith('0')) d=d.replace(/^0+/,'');
+  return cc+d;
+}
+
+// نص الفاتورة بصيغة واتساب (يدعم *عريض*)
+function buildWhatsAppText(sale){
+  const g=S.settings?.general||{};
+  const currency=g.currency||'EGP';
+  const m=n=>Number(n||0).toFixed(2);
+  const L=[];
+  L.push(`*${g.name||g.sysName||'الشمس'}*${sale.branchName?` — ${sale.branchName}`:''}`);
+  L.push('━━━━━━━━━━━━━━━');
+  L.push(`*فاتورة رقم:* ${sale.invNumber||'—'}`);
+  L.push(`*التاريخ:* ${new Date(sale.createdAt||Date.now()).toLocaleString('ar-EG')}`);
+  if(sale.customer&&sale.customer!=='عميل نقدي') L.push(`*العميل:* ${sale.customer}`);
+  if(sale.cashierName) L.push(`*الكاشير:* ${sale.cashierName}`);
+  L.push('━━━━━━━━━━━━━━━');
+  (sale.items||[]).forEach((it,i)=>{
+    const gross=+it.gross||(+it.price||0)*(+it.qty||0);
+    L.push(`${i+1}. ${it.name||''}`);
+    let ln=`   ${it.qty} × ${m(it.price)} = ${m(gross)} ${currency}`;
+    if(+it.discAmt>0) ln+=`\n   خصم: -${m(it.discAmt)} ← *${m(it.total)} ${currency}*`;
+    L.push(ln);
+  });
+  L.push('━━━━━━━━━━━━━━━');
+  L.push(`المجموع: ${m(sale.subtotal)} ${currency}`);
+  if(+sale.itemsDiscount>0) L.push(`خصم الأصناف: -${m(sale.itemsDiscount)} ${currency}`);
+  if(+sale.invDiscount>0)   L.push(`خصم الفاتورة: -${m(sale.invDiscount)} ${currency}`);
+  if(+sale.discount>0&&!(+sale.itemsDiscount>0||+sale.invDiscount>0))
+    L.push(`الخصم: -${m(sale.discount)} ${currency}`);
+  if(+sale.vat>0||+sale.tax>0) L.push(`الضريبة: ${m(sale.vat||sale.tax)} ${currency}`);
+  L.push(`*الإجمالي: ${m(sale.total)} ${currency}*`);
+  if(+sale.balance>0){
+    L.push(`المدفوع: ${m(sale.amountPaid)} ${currency}`);
+    L.push(`*المتبقي (دين): ${m(sale.balance)} ${currency}*`);
+  }
+  L.push('━━━━━━━━━━━━━━━');
+  if(g.phone) L.push(`📞 ${g.phone}`);
+  L.push('شكراً لتسوقكم معنا 🌟');
+  return L.join('\n');
+}
+
+// يفتح محادثة واتساب العميل ومعها نص الفاتورة جاهزاً للإرسال
+function openWhatsAppWith(phone, text){
+  const p=normalizeWaPhone(phone);
+  if(!p){ toast('رقم واتساب غير صالح','error'); return false; }
+  window.open(`https://wa.me/${p}?text=${encodeURIComponent(text)}`,'_blank');
+  return true;
+}
+
+// الزر الرئيسي: يستخدم رقم العميل المحفوظ، وإلا يطلب الرقم
+function sendSaleWhatsApp(saleArg){
+  const sale=saleArg||window._lastSale;
+  if(!sale){ toast('لا توجد فاتورة','error'); return; }
+  const cust=sale.customerId?(S.customers||{})[sale.customerId]:null;
+  const phone=cust?.phone||cust?.mobile||'';
+  if(phone&&normalizeWaPhone(phone)){
+    if(openWhatsAppWith(phone,buildWhatsAppText(sale)))
+      toast('تم فتح واتساب — اضغط إرسال داخل المحادثة','success');
     return;
   }
+  // لا يوجد رقم محفوظ → نطلبه من الكاشير
+  window._waPendingSale=sale;
+  const hint=document.getElementById('wa-phone-hint');
+  if(hint) hint.textContent = cust
+    ? `العميل "${cust.name||sale.customer}" ليس له رقم محفوظ — أدخل رقم واتساب لإرسال الفاتورة عليه.`
+    : 'فاتورة بدون عميل مسجّل — أدخل رقم واتساب لإرسال الفاتورة عليه.';
+  const saveWrap=document.getElementById('wa-save-phone');
+  if(saveWrap){
+    saveWrap.checked=!!cust;
+    saveWrap.closest('label').style.display=cust?'flex':'none';
+  }
+  const inp=document.getElementById('wa-phone-input');
+  if(inp) inp.value='';
+  previewWaPhone();
+  openModal('modal-wa-phone');
+  setTimeout(()=>inp?.focus(),120);
+}
 
-  // عرض قائمة اختيار مؤقتة
-  let existing = document.getElementById('cust-picker-drop');
-  if(existing) existing.remove();
-  const wrap = document.getElementById('cs-customer')?.closest('.fg');
-  if(!wrap) return;
+function previewWaPhone(){
+  const raw=document.getElementById('wa-phone-input')?.value||'';
+  const p=normalizeWaPhone(raw);
+  const el=document.getElementById('wa-phone-preview');
+  if(el) el.innerHTML = p
+    ? `سيُرسل إلى: <strong style="color:#25D366;">+${p}</strong>`
+    : 'سيُرسل إلى: —';
+}
+
+async function confirmWaPhone(){
+  const sale=window._waPendingSale;
+  if(!sale){ closeModal('modal-wa-phone'); return; }
+  const raw=document.getElementById('wa-phone-input')?.value||'';
+  const p=normalizeWaPhone(raw);
+  if(!p||p.length<10){ toast('أدخل رقم واتساب صحيح','error'); return; }
+
+  // حفظ الرقم في ملف العميل لو مطلوب
+  const custId=sale.customerId;
+  if(document.getElementById('wa-save-phone')?.checked && custId && (S.customers||{})[custId]){
+    try{
+      await dbUpdate('customers/'+custId,{phone:raw.trim(),updatedAt:new Date().toISOString()});
+      toast('تم حفظ الرقم في ملف العميل ✅','info');
+    }catch(e){ console.warn('save wa phone',e); }
+  }
+  closeModal('modal-wa-phone');
+  if(openWhatsAppWith(p,buildWhatsAppText(sale)))
+    toast('تم فتح واتساب — اضغط إرسال داخل المحادثة','success');
+  window._waPendingSale=null;
+}
+
+// ============================================================
+// بحث ذكي عن العميل داخل الكاشير — قائمة حيّة أثناء الكتابة
+// ============================================================
+let csCustMatches = [];   // النتائج المعروضة حالياً
+let csCustFocus   = -1;   // العنصر المحدَّد بالكيبورد
+
+// ترتيب النتائج: مطابقة بداية الاسم أولاً، ثم الأحدث زيارةً
+function findCustomerMatches(q){
+  const qq = (q||'').trim().toLowerCase();
+  const digits = qq.replace(/\D/g,'');
+  let list = filterByBranch(S.customers||{});
+  if(qq){
+    list = list.filter(([,c])=>{
+      const name=(c.name||'').toLowerCase();
+      const phone=String(c.phone||'').replace(/\D/g,'');
+      return name.includes(qq) || (digits && phone.includes(digits));
+    });
+    list.sort(([,a],[,b])=>{
+      const an=(a.name||'').toLowerCase().startsWith(qq)?0:1;
+      const bn=(b.name||'').toLowerCase().startsWith(qq)?0:1;
+      if(an!==bn) return an-bn;
+      return new Date(b.lastVisit||0)-new Date(a.lastVisit||0);
+    });
+  } else {
+    list.sort(([,a],[,b])=>new Date(b.lastVisit||0)-new Date(a.lastVisit||0));
+  }
+  return list.slice(0,8);
+}
+
+function hlMatch(text,q){
+  const t=String(text||''); const qq=(q||'').trim();
+  if(!qq) return t;
+  const i=t.toLowerCase().indexOf(qq.toLowerCase());
+  if(i<0) return t;
+  return t.slice(0,i)+`<mark style="background:var(--accent-bg);color:var(--accent);padding:0 1px;border-radius:3px;">${t.slice(i,i+qq.length)}</mark>`+t.slice(i+qq.length);
+}
+
+function closeCustDrop(){
+  document.getElementById('cust-picker-drop')?.remove();
+  csCustFocus=-1;
+}
+
+function renderCustDrop(q){
+  const input = document.getElementById('cs-customer'); if(!input) return;
+  const wrap  = input.closest('.fg'); if(!wrap) return;
+  closeCustDrop();
+  csCustMatches = findCustomerMatches(q);
+
   const drop = document.createElement('div');
   drop.id = 'cust-picker-drop';
-  drop.style.cssText = 'position:absolute;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);max-height:200px;overflow-y:auto;width:260px;margin-top:2px;';
-  drop.innerHTML = matches.map(([id,c])=>`
-    <div onclick="selectCustomerFromPicker('${id}','${c.name?.replace(/'/g,"\\'")||''}')" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border2);font-size:12px;" onmouseover="this.style.background='var(--accent-bg)'" onmouseout="this.style.background=''">
-      <strong>${c.name||'—'}</strong>
-      <span style="color:var(--text2);margin-right:6px;">${c.phone||''}</span>
-      ${(+c.balance||0)>0?`<span style="color:var(--red);font-size:10px;"> — دين: ${(+c.balance).toFixed(0)}</span>`:''}
-    </div>`).join('');
+  drop.style.cssText = 'position:absolute;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);max-height:230px;overflow-y:auto;width:280px;margin-top:2px;';
+
+  if(!csCustMatches.length){
+    drop.innerHTML = `
+      <div style="padding:11px 12px;font-size:12px;color:var(--text2);text-align:center;">
+        لا يوجد عميل مطابق
+      </div>
+      <div onmousedown="event.preventDefault();closeCustDrop();togglePosAddCust();"
+           style="padding:10px 12px;cursor:pointer;border-top:1px solid var(--border2);font-size:12px;color:var(--green);font-weight:700;text-align:center;">
+        <i class="fas fa-user-plus"></i> إضافة "${(q||'').trim()||'عميل جديد'}" كعميل جديد
+      </div>`;
+  } else {
+    drop.innerHTML = csCustMatches.map(([id,c],i)=>`
+      <div class="cust-drop-item" data-i="${i}"
+           onmousedown="event.preventDefault();selectCustomerFromPicker('${id}')"
+           onmouseover="csCustFocus=${i};updateCustDropFocus()"
+           style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border2);font-size:12px;">
+        <strong>${hlMatch(c.name||'—',q)}</strong>
+        <span style="color:var(--text2);margin-right:6px;">${hlMatch(c.phone||'',q)}</span>
+        ${(+c.balance||0)>0?`<span style="color:var(--red);font-size:10px;"> — دين: ${(+c.balance).toFixed(0)}</span>`:''}
+        ${(+c.balance||0)<0?`<span style="color:var(--purple);font-size:10px;"> — رصيد له: ${Math.abs(+c.balance).toFixed(0)}</span>`:''}
+      </div>`).join('');
+  }
+
   wrap.style.position='relative';
   wrap.appendChild(drop);
-  setTimeout(()=>document.addEventListener('click',()=>drop.remove(),{once:true}),100);
+  csCustFocus = csCustMatches.length ? 0 : -1;
+  updateCustDropFocus();
+}
+
+function updateCustDropFocus(){
+  document.querySelectorAll('#cust-picker-drop .cust-drop-item').forEach((el,i)=>{
+    const on = i===csCustFocus;
+    el.style.background = on ? 'var(--accent-bg)' : '';
+    if(on) el.scrollIntoView({block:'nearest'});
+  });
+}
+
+// يُستدعى مع كل حرف: يلغي الاختيار السابق ويحدّث القائمة فوراً
+function onCsCustomerInput(val){
+  clearSelectedCustomer();
+  renderCustDrop(val);
+}
+
+function onCsCustomerFocus(){
+  const input=document.getElementById('cs-customer');
+  input?.focus();
+  renderCustDrop(input?.value||'');
+}
+
+function onCsCustomerKeydown(e){
+  const open = !!document.getElementById('cust-picker-drop');
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    if(!open){ onCsCustomerFocus(); return; }
+    csCustFocus=Math.min(csCustMatches.length-1,csCustFocus+1); updateCustDropFocus();
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    csCustFocus=Math.max(0,csCustFocus-1); updateCustDropFocus();
+  } else if(e.key==='Enter'){
+    if(open && csCustFocus>=0 && csCustMatches[csCustFocus]){
+      e.preventDefault();
+      selectCustomerFromPicker(csCustMatches[csCustFocus][0]);
+    }
+  } else if(e.key==='Escape'){
+    closeCustDrop();
+  }
+}
+
+// زر البحث: يعرض كل العملاء (أو نتائج ما هو مكتوب)
+function pickCustomerForSale(){
+  onCsCustomerFocus();
 }
 
 function selectCustomerFromPicker(id,name){
-  document.getElementById('cs-customer').value    = name;
+  const c=(S.customers||{})[id];
+  const nm=name||c?.name||'';
+  document.getElementById('cs-customer').value    = nm;
   document.getElementById('cs-customer-id').value = id;
-  document.getElementById('cust-picker-drop')?.remove();
+  closeCustDrop();
   applyCustomerPriceMode(id);
-  toast('تم اختيار العميل: '+name,'success');
+  toast('تم اختيار العميل: '+nm,'success');
 }
 
 function clearSelectedCustomer(){
   document.getElementById('cs-customer-id').value = '';
 }
+
+// إغلاق القائمة عند الضغط خارجها
+document.addEventListener('click',e=>{
+  const drop=document.getElementById('cust-picker-drop');
+  if(!drop) return;
+  if(e.target.closest('#cust-picker-drop')||e.target.closest('#cs-customer')||e.target.closest('#cs-cust-search-btn')) return;
+  closeCustDrop();
+});
 
 // ── إضافة عميل سريعة من داخل الكاشير ──
 function togglePosAddCust(){
@@ -8217,6 +8693,8 @@ function newSale(){
   document.getElementById('cs-customer-id').value = '';
   document.getElementById('ct-discount').value    = '0';
   document.getElementById('ct-received').value    = '0';
+  const cpEl=document.getElementById('ct-credit-paid'); if(cpEl) cpEl.value='0';
+  calcCreditRemain();
   const nEl=document.getElementById('cs-notes'); if(nEl) nEl.value='';
   populateCsCashbox(payMethod||'cash');
   closeModal('modal-receipt');
@@ -8939,6 +9417,13 @@ function buildInvoiceHTML(sale){
 
   const subtotal = +sale.subtotal || +sale.total || 0;
   const discount = +sale.discount || 0;
+  // خصم الأصناف يظهر في عمود كل سطر، والباقي هو خصم الفاتورة العام الموزَّع تناسبياً
+  const itemsDisc    = sale.itemsDiscount!==undefined
+                       ? (+sale.itemsDiscount||0)
+                       : (sale.items||[]).reduce((s,it)=>s+(+it.discAmt||0),0);
+  const invLevelDisc = sale.invDiscount!==undefined
+                       ? (+sale.invDiscount||0)
+                       : Math.max(0, discount-itemsDisc);
   const taxAmt   = +sale.vat || +sale.tax || 0;
   const paid     = sale.amountPaid!==undefined ? (+sale.amountPaid||0) : (+sale.received||0);
   const balance  = +sale.balance || 0;
@@ -9010,8 +9495,11 @@ function buildInvoiceHTML(sale){
       <thead style="display:table-header-group;"><tr>${thCols}</tr></thead>
       <tbody>
         ${items.map((it,i)=>{
-          const lineTotal=(+it.price||0)*(+it.qty||0);
-          const lineDisc = (discount>0 && subtotal>0) ? (lineTotal/subtotal*discount) : 0;
+          const lineTotal=+it.gross || (+it.price||0)*(+it.qty||0);
+          // خصم الصنف المسجَّل صراحةً + نصيب السطر من خصم الفاتورة العام
+          const ownDisc  = +it.discAmt||0;
+          const genDisc  = invLevelDisc>0 && subtotal>0 ? (lineTotal/subtotal*invLevelDisc) : 0;
+          const lineDisc = ownDisc + genDisc;
           return `<tr style="background:${i%2===0?rowEven:rowOdd};page-break-inside:avoid;">
             ${showSeq   ? td(i+1) : ''}
             ${showName  ? td(`${it.name||''}${sale.saleMode==='mixed'&&it.priceMode?` <span style="font-weight:400;font-size:9px;color:${lblCol};">(${PRICE_MODE_LABELS[it.priceMode]})</span>`:''}${it.desc?`<br><span style="font-weight:400;font-size:10px;color:${lblCol};">${it.desc}</span>`:''}`,'font-weight:600;') : ''}
@@ -9044,7 +9532,9 @@ function buildInvoiceHTML(sale){
           <div style="background:${rowOdd};border-radius:8px;padding:10px;border:1px solid ${bdCol}44;color:${sumCol};">
             <div style="font-size:11px;font-weight:700;margin-bottom:6px;">${ivGet('inv-summary-label')}</div>
             <div style="font-size:11px;margin-bottom:2px;">الإجمالي: <strong>${invMoney(subtotal)}</strong></div>
-            <div style="font-size:11px;margin-bottom:2px;color:#c00;">الخصم: <strong>- ${invMoney(discount)}</strong></div>
+            ${itemsDisc>0?`<div style="font-size:11px;margin-bottom:2px;color:#c00;">خصم الأصناف: <strong>- ${invMoney(itemsDisc)}</strong></div>`:''}
+            ${invLevelDisc>0?`<div style="font-size:11px;margin-bottom:2px;color:#c00;">خصم الفاتورة: <strong>- ${invMoney(invLevelDisc)}</strong></div>`:''}
+            <div style="font-size:11px;margin-bottom:2px;color:#c00;">إجمالي الخصم: <strong>- ${invMoney(discount)}</strong></div>
             <div style="font-size:11px;margin-bottom:2px;">بعد الخصم: <strong>${invMoney(subtotal-discount)}</strong></div>
             <div style="font-size:11px;margin-bottom:2px;">الضريبة: <strong>+ ${invMoney(taxAmt)}</strong></div>
             <div style="font-size:11px;font-weight:700;">بعد الضريبة: <strong>${invMoney(sale.total)}</strong></div>
@@ -10280,6 +10770,7 @@ function holdCart() {
     items: cart.map(i=>({...i})),
     saleMode,
     discount: document.getElementById('ct-discount')?.value||'0',
+    discountType: document.getElementById('ct-discount-type')?.value||'fixed',
     heldAt: new Date().toISOString(),
   });
   saveHeldCarts();
@@ -10299,9 +10790,10 @@ function openHeldCarts() {
   } else {
     const currency = S.settings?.general?.currency||'EGP';
     list.innerHTML = heldCarts.map((h,i)=>{
-      const total = h.items.reduce((s,it)=>s+(it.price*it.qty),0);
+      // إجمالي بعد خصومات الأصناف، ثم خصم الفاتورة المعلَّق
+      const total = h.items.reduce((s,it)=>s+lineNet(it),0);
       const disc  = parseFloat(h.discount)||0;
-      const net   = total * (1 - disc/100);
+      const net   = Math.max(0, total - (h.discountType==='pct' ? total*Math.min(100,disc)/100 : Math.min(total,disc)));
       const timeAgo = h.heldAt ? fDateShort(h.heldAt) : '—';
       return `<div style="border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:9px;background:var(--card2);">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
@@ -10338,6 +10830,7 @@ function resumeCart(i) {
   document.getElementById('cs-customer').value    = held.custName||'';
   document.getElementById('cs-customer-id').value = held.custId||'';
   document.getElementById('ct-discount').value    = held.discount||'0';
+  const dtEl=document.getElementById('ct-discount-type'); if(dtEl) dtEl.value = held.discountType||'fixed';
   // نستعيد وضع البيع كما كان وقت التعليق بدون إعادة تسعير الأصناف المحفوظة
   saleMode = held.saleMode==='wholesale' ? 'wholesale' : 'retail';
   document.querySelectorAll('.sale-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===saleMode));
@@ -13177,6 +13670,7 @@ function onRefundMethodChange() {
     ? 'الاسترداد نقدي: سيُخصم المبلغ من الخزينة المختارة'
     : method==='credit' ? 'رصيد: سيُضاف للعميل بدون خصم من الخزينة'
     : method==='exchange' ? 'استبدال: لا يوجد تأثير على الخزينة' : 'لا يوجد استرداد';
+  calcReturnTotal(); // تحديث توزيع الدين/النقد فوراً
 }
 
 function onReturnTypeChange() {
@@ -13373,7 +13867,71 @@ function calcReturnTotal() {
   const currency = S.settings?.general?.currency||'EGP';
   const el = document.getElementById('retf-total-val');
   if(el) el.textContent = total.toFixed(2) + ' ' + currency;
+  renderReturnSplit(total);
   return total;
+}
+
+// ============================================================
+// توزيع قيمة المرتجع: يُخصم أولاً من دين العميل على الفاتورة، والباقي يُرد نقداً
+// - فاتورة آجلة بالكامل + مرتجع جزئي  → كله خصم من الدين
+// - فاتورة آجلة جزئياً + مرتجع كامل   → يُلغى باقي الدين ويُرد ما دفعه نقداً
+// - فاتورة مدفوعة بالكامل             → كله استرداد نقدي
+// ============================================================
+function calcReturnSplit(total){
+  const type   = document.getElementById('retf-type')?.value||'sale';
+  const method = document.getElementById('retf-refund-method')?.value||'cash';
+  const invId  = document.getElementById('retf-invoice-id')?.value||'';
+  const sale   = type==='sale' ? (S.sales||{})[invId] : null;
+  const saleDebt = Math.max(0, +sale?.balance||0);
+
+  // مرتجع مشتريات أو استبدال أو بدون استرداد: لا خصم دين ولا نقد
+  if(type!=='sale' || method==='exchange' || method==='none'){
+    return {saleDebt, debtCut:0, cashBack:0, storeCredit:0};
+  }
+  const debtCut  = Math.min(total, saleDebt);       // ما يُطفأ من دين هذه الفاتورة
+  const rest     = Math.max(0, total-debtCut);      // ما تبقى بعد إطفاء الدين
+  if(method==='credit'){
+    // رصيد لدى المتجر: الباقي يُضاف كرصيد دائن للعميل بدل النقد
+    return {saleDebt, debtCut, cashBack:0, storeCredit:rest};
+  }
+  return {saleDebt, debtCut, cashBack:rest, storeCredit:0};
+}
+
+function renderReturnSplit(total){
+  const box=document.getElementById('retf-split-box'); if(!box) return;
+  const type  = document.getElementById('retf-type')?.value||'sale';
+  const invId = document.getElementById('retf-invoice-id')?.value||'';
+  if(type!=='sale' || !invId || !(total>0)){ box.style.display='none'; return; }
+
+  const currency = S.settings?.general?.currency||'EGP';
+  const sp = calcReturnSplit(total);
+  const method = document.getElementById('retf-refund-method')?.value||'cash';
+  box.style.display='block';
+  document.getElementById('retf-sale-debt').textContent = sp.saleDebt.toFixed(2)+' '+currency;
+  document.getElementById('retf-debt-cut').textContent  = sp.debtCut.toFixed(2)+' '+currency;
+  const cashLbl = document.getElementById('retf-cash-lbl');
+  const cashVal = document.getElementById('retf-cash-back');
+  if(method==='credit'){
+    cashLbl.textContent = 'يُضاف رصيداً للعميل:';
+    cashVal.textContent = sp.storeCredit.toFixed(2)+' '+currency;
+    cashVal.style.color = 'var(--purple)';
+  } else {
+    cashLbl.textContent = 'يُرد نقداً من الخزينة:';
+    cashVal.textContent = sp.cashBack.toFixed(2)+' '+currency;
+    cashVal.style.color = 'var(--red)';
+  }
+  const hint=document.getElementById('retf-split-hint');
+  if(hint){
+    if(method==='exchange'||method==='none'){
+      hint.textContent='لا يوجد أي أثر مالي — استبدال / بدون استرداد.';
+    } else if(sp.debtCut>0 && (sp.cashBack>0||sp.storeCredit>0)){
+      hint.textContent='المرتجع يفوق دين العميل — يُطفأ الدين بالكامل والباقي يُرَد له.';
+    } else if(sp.debtCut>0){
+      hint.textContent='قيمة المرتجع كلها تُخصم من دين العميل — لا يخرج نقد من الخزينة.';
+    } else {
+      hint.textContent='لا يوجد دين على هذه الفاتورة — تُرَد القيمة كاملة.';
+    }
+  }
 }
 
 async function saveReturn() {
@@ -13393,12 +13951,6 @@ async function saveReturn() {
     toast('يجب اختيار فاتورة البيع الأصلية — المرتجع لا يُقبل بدون فاتورة','error');
     return;
   }
-  // التحقق من الخزينة عند الاسترداد النقدي
-  if(refundMethod==='cash' && !cbId) {
-    toast('يجب اختيار الخزينة التي سيُصرف منها مبلغ الاسترداد','error');
-    return;
-  }
-
   const validItems = retItems.filter(i=>(i.name||'').trim()&&(+i.qty||0)>0);
   if(!validItems.length) { toast('يرجى إضافة صنف واحد على الأقل','error'); return; }
 
@@ -13413,8 +13965,19 @@ async function saveReturn() {
   const total      = validItems.reduce((s,i)=>s+(+i.qty||0)*(+i.price||0),0);
   const branchName = getBranchName(branchId)||'مركزي';
 
+  // توزيع القيمة: خصم من الدين أولاً، ثم استرداد نقدي/رصيد بالباقي
+  const split = calcReturnSplit(total);
+  // الخزينة مطلوبة فقط إذا كان هناك مبلغ نقدي سيخرج فعلياً
+  if(split.cashBack>0 && !cbId) {
+    toast('يجب اختيار الخزينة التي سيُصرف منها مبلغ الاسترداد','error');
+    return;
+  }
+
   const retData = {
     type, date, reason, refundMethod, notes,
+    debtCut:     split.debtCut,     // ما خُصم من دين العميل
+    cashBack:    split.cashBack,    // ما خرج نقداً من الخزينة
+    storeCredit: split.storeCredit, // ما أُضيف كرصيد دائن للعميل
     branchId, branchName,
     partyName: partyName||( type==='sale'?'عميل نقدي':'مورد غير محدد' ),
     partyId:   partyId||'',
@@ -13452,37 +14015,54 @@ async function saveReturn() {
       });
     }
 
-    // 2. خصم من الخزينة عند الاسترداد النقدي
-    if(refundMethod==='cash' && cbId && total>0) {
+    // 2. خصم من الخزينة بقيمة الجزء النقدي فقط (بعد إطفاء الدين)
+    if(split.cashBack>0 && cbId) {
       await addCashboxEntry(
-        cbId, total, 'withdraw',
+        cbId, split.cashBack, 'withdraw',
         `استرداد مرتجع مبيعات #${retId.slice(-6).toUpperCase()} — ${partyName||'عميل نقدي'}`,
         retId
       );
     }
 
-    // 3. تحديث رصيد الفاتورة الأصلية عند مرتجع المبيعات
+    // 3. تحديث الفاتورة الأصلية: إنقاص الإجمالي، وإطفاء الدين، وتعديل المدفوع
     if(type==='sale' && invId && (S.sales||{})[invId]) {
       const sale    = S.sales[invId];
       const saleNew = Math.max(0,(+sale.total||0)-total);
+      const newBal  = Math.max(0,(+sale.balance||0)-split.debtCut);
+      const newPaid = Math.max(0,(+sale.amountPaid||0)-split.cashBack);
       await dbUpdate('sales/'+invId,{
         returnedAmount: (+sale.returnedAmount||0)+total,
         total:          saleNew,
+        balance:        newBal,
+        amountPaid:     newPaid,
+        status:         newBal<=0 ? 'paid' : (newPaid>0?'partial':'unpaid'),
         updatedAt:      new Date().toISOString(),
       });
     }
 
-    // 4. تحديث إحصائيات العميل
+    // 4. تحديث إحصائيات العميل ورصيد ديونه
     if(type==='sale' && partyId && (S.customers||{})[partyId]) {
       const c = S.customers[partyId];
-      await dbUpdate('customers/'+partyId,{
+      const custUpd = {
         totalBuy:  Math.max(0,(+c.totalBuy||0)-total),
         updatedAt: new Date().toISOString(),
-      });
+      };
+      // الدين المخصوم + الرصيد الدائن (رصيد المتجر يُسجَّل كرصيد سالب لصالح العميل)
+      const balCut = split.debtCut + split.storeCredit;
+      if(balCut>0){
+        const raw = (+c.balance||0) - balCut;
+        custUpd.balance = refundMethod==='credit' ? raw : Math.max(0,raw);
+      }
+      await dbUpdate('customers/'+partyId,custUpd);
     }
 
     closeModal('modal-return');
-    toast('✅ تم حفظ المرتجع وتحديث جميع الإحصائيات');
+    const currency=S.settings?.general?.currency||'EGP';
+    let msg='✅ تم حفظ المرتجع';
+    if(split.debtCut>0)     msg+=` — خُصم ${split.debtCut.toFixed(2)} ${currency} من دين العميل`;
+    if(split.cashBack>0)    msg+=` — رُد ${split.cashBack.toFixed(2)} ${currency} نقداً`;
+    if(split.storeCredit>0) msg+=` — أُضيف ${split.storeCredit.toFixed(2)} ${currency} رصيداً للعميل`;
+    toast(msg);
     viewReturn(retId);
   } catch(e) { toast('خطأ: '+e.message,'error'); }
 }
@@ -13534,6 +14114,9 @@ function viewReturn(retId) {
           <tr><td style="color:#555;padding:3px 0;">التاريخ:</td><td>${fDateShort(r.date)}</td></tr>
           <tr><td style="color:#555;padding:3px 0;">سبب الإرجاع:</td><td style="font-weight:700;">${RETURN_REASONS[r.reason]||r.reason||'—'}</td></tr>
           <tr><td style="color:#555;padding:3px 0;">الفاتورة الأصلية:</td><td>${r.invoiceId?('#'+r.invoiceId.slice(-5).toUpperCase()):'—'}</td></tr>
+          ${+r.debtCut>0?`<tr><td style="color:#555;padding:3px 0;">خُصم من الدين:</td><td style="font-weight:700;color:#0a7;">${(+r.debtCut).toFixed(2)} ${currency}</td></tr>`:''}
+          ${+r.cashBack>0?`<tr><td style="color:#555;padding:3px 0;">رُد نقداً:</td><td style="font-weight:700;color:#c00;">${(+r.cashBack).toFixed(2)} ${currency}</td></tr>`:''}
+          ${+r.storeCredit>0?`<tr><td style="color:#555;padding:3px 0;">رصيد للعميل:</td><td style="font-weight:700;color:#70a;">${(+r.storeCredit).toFixed(2)} ${currency}</td></tr>`:''}
         </table>
       </div>
     </div>
